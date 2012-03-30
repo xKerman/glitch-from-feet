@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <title>Glitch from feet</title>
+  </head>
+  <body>
+    <h1>足元から Glitch するやつ</h1>
+    <div id="container">
+      <div id="row">
+        <div id="left">
+          <div id="dropcircle-container">
+            <div id="dropcircle">
+              Drop PNG Here
+              <span id="limit">limit: 1 file at a time.</span>
+            </div>
+          </div>
+        </div>
+        <div id="right">
+        </div>
+      </div>
+    </div>
+    <script src="{{ url_for('static', filename='dataview.min.js') }}"></script>
+    <script src="{{ url_for('static', filename='jsziptools.min.js') }}"></script>
+    <script src="{{ url_for('static', filename='png.js') }}"></script>
+    <script src="{{ url_for('static', filename='glitch.js') }}"></script>
+  </body>
+</html>
