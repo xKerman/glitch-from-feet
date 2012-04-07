@@ -33,6 +33,55 @@
         };
     })();
 
+    zlib.deflate = function (data) {
+        var ibytes = jz.utils.arrayBufferToBytes(data);
+        var length = ibytes.length;
+        var len;
+        var ioffset = 0;
+        var ooffset = 0;
+        var bfinal = 0;
+        var btype = 0;
+        var header = 0;
+        var numblock = Math.ceil(length / 0xFFFF);
+        var result = new ArrayBuffer(length + numblock * 5);
+        var resultView = new DataView(result);
+        var resultView8 = new Uint8Array(result);
+        while (ioffset < length) {
+            len = Math.min(0xFFFF, length);
+            bfinal = (length === 0)? 1: 0;
+            header = (btype << 2) | bfinal;
+            resultView8[ooffset] = header;
+            resultView.setInt16(ooffset+1, len, true);
+            resultView.setInt16(ooffset+3, (~len & 0xFFFF), true);
+            ooffset += 5;
+            resultView8.set(ibytes.subarray(ioffset, ioffset+len), ooffset);
+            ioffset += len;
+            ooffset += len;
+        }
+        return result;
+    };
+
+    zlib.compress = function (data) {
+        var cm = 8;
+        var cinfo = 7;
+        var cmf = (cinfo << 4) | cm;
+        var fdict = 0;
+        var flevel = 0;
+        var flg = (flevel << 6) | (fdict << 5);
+        var fcheck = 31 - (cmf * 256 + flg) % 31;
+        flg |= fcheck;
+        var compressed = zlib.deflate(data);
+        var checksum = jz.algorithms.adler32(data);
+        var iview = new Uint8Array(compressed);
+        var result = new ArrayBuffer(2 + iview.length + 4);
+        var resultView = new DataView(result);
+        var resultView8 = new Uint8Array(result);
+        resultView8.set([cmf, flg], 0);
+        resultView8.set(iview, 2);
+        resultView.setInt32(2+iview.length, checksum, false);
+        return result;
+    };
+
     var PNG = function (buf) {
         if (!(this instanceof PNG)) {
             return new PNG(buf);
@@ -291,14 +340,12 @@
         this._writeChecksum(arraybuf, chunk.type);
     };
     PNGWriter.prototype._writeIDATChunk = function (raw) {
-        console.time('write');
-        var compressed = zlib.compress(raw, 9);
-        console.timeEnd('write');
+        var compressed = zlib.compress(raw);
         var length = compressed.byteLength;
         this._writeLength(length);
         this._writeType('IDAT');
         this._bb.append(compressed);
-        this._writeChecksum(raw, 'IDAT');
+        this._writeChecksum(compressed, 'IDAT');
     };
 
     global.PNG = PNG;
