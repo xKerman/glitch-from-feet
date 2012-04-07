@@ -39,7 +39,7 @@
         }, false);
         img.addEventListener('click', function (ev) {
             var reader = new FileReader();
-            reader.addEventListener('load', function (e) {
+            reader.onload = function (e) {
                 var buffer = e.target.result;
                 var png = new PNG(buffer);
                 for (var i = png.height - 1; i; --i) {
@@ -50,7 +50,7 @@
                 console.timeEnd('write');
                 var url = URL.createObjectURL(blob);
                 img.src = url;
-            }, false);
+            };
             reader.readAsArrayBuffer(file);
         }, false);
         var insertPoint = document.getElementById('right');
