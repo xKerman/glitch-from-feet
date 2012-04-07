@@ -24,7 +24,7 @@
         }
         clearPreviousImage();
         var img = document.createElement('img');
-        img.src = window.URL.createObjectURL(file);
+        img.src = URL.createObjectURL(file);
         img.className = 'target';
         img.addEventListener('load', function (e) {
             var width = img.width;
