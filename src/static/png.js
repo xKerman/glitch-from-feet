@@ -25,7 +25,8 @@
 
         return function(buffer, start){
             var result = start || 0;
-            var bytes = jz.utils.arrayBufferToBytes(buffer), i, n, t = table;
+            var bytes = new Uint8Array(buffer);
+            var i, n, t = table;
             result = ~result;
             for(i = 0, n = bytes.length; i < n; ++i)
                 result = (result >>> 8) ^ t[(bytes[i] ^ result) & 0xFF];
