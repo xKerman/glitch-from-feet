@@ -7,14 +7,6 @@
     // var crc32 = jz.algorithms.crc32;
     var BlobBuilder = global.BlobBuilder || global.MozBlobBuilder || global.WebKitBlobBuilder;
 
-    var isLittleEndian = (function () {
-        var buffer = new ArrayBuffer(4);
-        var int8 = new Uint8Array(buffer);
-        int8[3] = 1;
-        var int32 = new Uint32Array(buffer);
-        return !!(int32[0] & 0x01);
-    }());
-
     var crc32 = (function(){
         // crc32([0x00, 0x00, 0x02, 0x00, 0x00, 0x00, 0x02,0x00, 0x08, 0x02, 0x00, 0x00, 0x00], -1465799158) =>  2065318829
         var table = (function(){
@@ -140,7 +132,7 @@
         return true;
     };
     PNGParser.prototype._parseChunkLength = function (dataview) {
-        var length = dataview.getInt32(this._offset, isLittleEndian);
+        var length = dataview.getInt32(this._offset, false);
         this._offset += 4;
         if (length < 0 || length > PNG.MAX_CHUNK_LEN) {
             throw new Error('chunk length is not valid');
@@ -160,9 +152,9 @@
             throw new Error('chunk type is not IHDR, ' + type);
         }
         var header = {};
-        header.width = dataview.getInt32(this._offset, isLittleEndian);
+        header.width = dataview.getInt32(this._offset, false);
         this._offset += 4;
-        header.height = dataview.getInt32(this._offset, isLittleEndian);
+        header.height = dataview.getInt32(this._offset, false);
         this._offset += 4;
         var remainder = new Uint8Array(dataview.buffer, this._offset, 5);
         this._offset += 5;
@@ -250,7 +242,7 @@
     PNGWriter.prototype._writeLength = function (length) {
         var arraybuf = new ArrayBuffer(4);
         var dataview = new DataView(arraybuf);
-        dataview.setInt32(0, length, isLittleEndian);
+        dataview.setInt32(0, length, false);
         this._bb.append(arraybuf);
     };
     PNGWriter.prototype._writeType = function (type) {
@@ -270,7 +262,7 @@
         var arraybuf = new ArrayBuffer(4);
         var dataview = new DataView(arraybuf);
         var checksum = crc32(new Uint8Array(data), start);
-        dataview.setInt32(0, checksum, isLittleEndian);
+        dataview.setInt32(0, checksum, false);
         this._bb.append(arraybuf);
     };
     PNGWriter.prototype._writeHeader = function (header) {
@@ -278,8 +270,8 @@
         this._writeType('IHDR');
         var arraybuf = new ArrayBuffer(13);
         var dataview = new DataView(arraybuf);
-        dataview.setInt32(0, header.width, isLittleEndian);
-        dataview.setInt32(4, header.height, isLittleEndian);
+        dataview.setInt32(0, header.width, false);
+        dataview.setInt32(4, header.height, false);
         dataview.setInt8(8, header.bitdepth);
         dataview.setInt8(9, header.colortype);
         dataview.setInt8(10, header.compression);
