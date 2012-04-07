@@ -43,7 +43,7 @@
                 var buffer = e.target.result;
                 var png = new PNG(buffer);
                 for (var i = png.height - 1; i; --i) {
-                    png.getline(i)[0] = PNG.FILTER_PEATH;
+                    png.getline(i)[0] = PNG.FILTER_PAETH;
                 }
                 console.time('write');
                 var blob = png.write();

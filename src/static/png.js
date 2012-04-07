@@ -60,7 +60,7 @@
     PNG.FILTER_SUB = 1;
     PNG.FILTER_UP = 2;
     PNG.FILTER_AVERAGE = 3;
-    PNG.FILTER_PEATH = 4;
+    PNG.FILTER_PAETH = 4;
     PNG.isPNG = function (file) {
         return /image\/png/i.test(file.type);
     };
