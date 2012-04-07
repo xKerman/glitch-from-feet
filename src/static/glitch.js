@@ -42,14 +42,23 @@
             reader.onload = function (e) {
                 var buffer = e.target.result;
                 var png = new PNG(buffer);
-                for (var i = png.height - 1; i; --i) {
-                    png.getline(i)[0] = PNG.FILTER_PAETH;
-                }
-                console.time('write');
-                var blob = png.write();
-                console.timeEnd('write');
-                var url = URL.createObjectURL(blob);
-                img.src = url;
+                var start = png.height - 1;
+                var end = Math.max(start - 10, 0);
+                var cid = setInterval(function () {
+                    if (start === 0) {
+                        clearInterval(cid);
+                        alert('finished!');
+                        return;
+                    }
+                    for (var i = start; i > end; --i) {
+                        png.getline(i)[0] = PNG.FILTER_PAETH;
+                    }
+                    var blob = png.write();
+                    var url = URL.createObjectURL(blob);
+                    img.src = url;
+                    start = end;
+                    end = Math.max(start - 10, 0);
+                }, 250);
             };
             reader.readAsArrayBuffer(file);
         }, false);
