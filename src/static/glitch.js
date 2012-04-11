@@ -37,7 +37,9 @@
             }
             URL.revokeObjectURL(img.src);
         }, false);
-        img.addEventListener('click', function (ev) {
+        var glitchButton = document.getElementById('glitch-button');
+        glitchButton.addEventListener('click', function (ev) {
+            glitchButton.disabled = true;
             var reader = new FileReader();
             reader.onload = function (e) {
                 var buffer = e.target.result;
@@ -47,6 +49,7 @@
                 var cid = setInterval(function () {
                     if (start === 0) {
                         clearInterval(cid);
+                        glitchButton.disabled = false;
                         alert('finished!');
                         return;
                     }
