@@ -106,6 +106,44 @@
     PNG.isPNG = function (file) {
         return /image\/png/i.test(file.type);
     };
+    PNG.fromCanvas = function (canvas) {
+        var context = canvas.getContext('2d');
+        var width = canvas.width;
+        var height = canvas.height;
+        var imageData = context.getImageData(0, 0, width, height);
+        var pixels = new Uint8Array(imageData.data);
+        console.log(pixels.length);
+        var raw = new Uint8Array((1 + width * 4) * height);
+        var linelength = width * 4;
+        for (var i = 0; i < height; ++i) {
+            raw[i * (linelength + 1)] = PNG.FILTER_NONE;
+            raw.set(pixels.subarray(i * linelength, (i + 1) * linelength), i * (linelength + 1) + 1);
+        }
+        var png = {
+            header: {
+                width: width,
+                height: height,
+                bitdepth: 8,
+                colortype: 6,
+                compression: 0,
+                filter: 0,
+                iterlace: 0
+            },
+            chunks: [
+                {type: 'IDAT', data: zlib.compress(raw)},
+                {type: 'IEND', data: new Uint8Array(0)}
+            ],
+            raw: raw,
+            width: width,
+            height: height,
+            _parser: new PNGParser(),
+            _writer: new PNGWriter()
+        };
+        for (var prop in PNG.prototype) {
+            png[prop] = PNG.prototype[prop];
+        }
+        return png;
+    };
     PNG.prototype.bps = function () { // byte per sample
         var colortype = this.header.colortype;
         var bitdepth = this.header.bitdepth;
