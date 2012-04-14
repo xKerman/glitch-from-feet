@@ -18,10 +18,45 @@
         range.detach();
     };
 
-    var showImage = function (file) {
-        if (!PNG.isPNG(file)) {
+    var loadImageAsPNG = function (file, callback) {
+        if (!/^image\//.test(file.type)) {
             return;
         }
+        var img = document.createElement('img');
+        img.src = URL.createObjectURL(file);
+        img.addEventListener('load', function (e) {
+            var width = img.width;
+            var height = img.height;
+            var canvas = document.createElement('canvas');
+            canvas.width = width;
+            canvas.height = height;
+            var context = canvas.getContext('2d');
+            context.drawImage(img, 0, 0);
+            var png = PNG.fromCanvas(canvas);
+            callback(png);
+            URL.revokeObjectURL(img.src);
+        }, false);
+    };
+
+    var processImage = function (file, callback) {
+        if (!/^image\//.test(file.type)) {
+            return;
+        }
+        if (PNG.isPNG(file)) {
+            var reader = new FileReader();
+            reader.onload = function (ev) {
+                var buffer = ev.target.result;
+                var png = PNG(buffer);
+                callback(png);
+            };
+            reader.readAsArrayBuffer(file);
+        }
+        else {
+            loadImageAsPNG(file, callback);
+        }
+    };
+
+    var showImage = function (file) {
         clearPreviousImage();
         var img = document.createElement('img');
         img.src = URL.createObjectURL(file);
@@ -40,10 +75,7 @@
         var glitchButton = document.getElementById('glitch-button');
         glitchButton.addEventListener('click', function (ev) {
             glitchButton.disabled = true;
-            var reader = new FileReader();
-            reader.onload = function (e) {
-                var buffer = e.target.result;
-                var png = new PNG(buffer);
+            var glitch = function (png) {
                 var start = png.height - 1;
                 var end = Math.max(start - 10, 0);
                 var cid = setInterval(function () {
@@ -63,7 +95,7 @@
                     end = Math.max(start - 10, 0);
                 }, 250);
             };
-            reader.readAsArrayBuffer(file);
+            processImage(file, glitch);
         }, false);
         var insertPoint = document.getElementById('right');
         insertPoint.appendChild(img);
