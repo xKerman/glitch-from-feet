@@ -111,20 +111,23 @@
         var width = canvas.width;
         var height = canvas.height;
         var imageData = context.getImageData(0, 0, width, height);
-        var pixels = new Uint8Array(imageData.data);
-        console.log(pixels.length);
-        var raw = new Uint8Array((1 + width * 4) * height);
-        var linelength = width * 4;
-        for (var i = 0; i < height; ++i) {
-            raw[i * (linelength + 1)] = PNG.FILTER_NONE;
-            raw.set(pixels.subarray(i * linelength, (i + 1) * linelength), i * (linelength + 1) + 1);
+        var pixels = imageData.data;
+        var raw = new Uint8Array((1 + width * 3) * height);
+        var linelength = width * 3;
+        for (var y = 0; y < height; ++y) {
+            raw[y * (linelength + 1)] = PNG.FILTER_NONE;
+            for (var ix = 0, ox = 1; ix < width * 4; ix += 4, ox += 3) {
+                raw[y * (linelength + 1) + ox + 0] = pixels[(y * width * 4) + ix + 0];
+                raw[y * (linelength + 1) + ox + 1] = pixels[(y * width * 4) + ix + 1];
+                raw[y * (linelength + 1) + ox + 2] = pixels[(y * width * 4) + ix + 2];
+            }
         }
         var png = {
             header: {
                 width: width,
                 height: height,
                 bitdepth: 8,
-                colortype: 6,
+                colortype: 2,
                 compression: 0,
                 filter: 0,
                 iterlace: 0
