@@ -13,7 +13,7 @@
 
     var clearPreviousImage = function () {
         var range = document.createRange();
-        range.selectNodeContents(document.getElementById('right'));
+        range.selectNodeContents(document.getElementById('canvas-container'));
         range.deleteContents();
         range.detach();
     };
@@ -96,17 +96,16 @@
             }
             URL.revokeObjectURL(img.src);
         }, false);
-        var glitchButton = document.getElementById('glitch-button');
         glitchButton.addEventListener('click', function handler (ev) {
             processImage(file, glitch);
             glitchButton.removeEventListener('click', handler, false);
         }, false);
-        var insertPoint = document.getElementById('right');
+        var insertPoint = document.getElementById('canvas-container');
         insertPoint.appendChild(img);
     };
 
 
-    var dropCircle = document.getElementById('dropcircle');
+    var dropCircle = document.getElementById('canvas-container');
     dropCircle.addEventListener('dragenter', stopEvent, false);
     dropCircle.addEventListener('dragover', stopEvent, false);
     dropCircle.addEventListener('drop', function (e) {
