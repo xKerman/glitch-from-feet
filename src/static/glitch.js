@@ -60,11 +60,18 @@
         var start = png.height - 1;
         var end = Math.max(start - 10, 0);
         var glitchButton = document.getElementById('glitch-button');
+        var id = setInterval(function () {
+            var opacity = glitchButton.style.opacity;
+            if (opacity <= 0) {
+                clearInterval(id);
+                return;
+            }
+            glitchButton.style.opacity = opacity - 0.1;
+        }, 20);
         glitchButton.disabled = true;
         var cid = setInterval(function () {
             if (start <= 0) {
                 clearInterval(cid);
-                glitchButton.disabled = false;
                 alert('finished!');
                 return;
             }
@@ -81,10 +88,14 @@
     };
 
     var showImage = function (file) {
+        var glitchButton = document.getElementById('glitch-button');
+        glitchButton.style.opacity = 1;
+        glitchButton.disabled = false;
         clearPreviousImage();
         var img = document.createElement('img');
         img.src = URL.createObjectURL(file);
         img.id = 'target';
+        img.style.opacity = 0;
         img.addEventListener('load', function (e) {
             var width = img.width;
             var height = img.height;
@@ -94,6 +105,7 @@
             else {
                 img.height = Math.min(height, 500);
             }
+            img.style.opacity = 1;
             URL.revokeObjectURL(img.src);
         }, false);
         glitchButton.addEventListener('click', function handler (ev) {
