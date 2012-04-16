@@ -56,11 +56,35 @@
         }
     };
 
+    var glitch = function (png) {
+        var start = png.height - 1;
+        var end = Math.max(start - 10, 0);
+        var glitchButton = document.getElementById('glitch-button');
+        glitchButton.disabled = true;
+        var cid = setInterval(function () {
+            if (start <= 0) {
+                clearInterval(cid);
+                glitchButton.disabled = false;
+                alert('finished!');
+                return;
+            }
+            for (var i = start; i > end; --i) {
+                png.getline(i)[0] = PNG.FILTER_PAETH;
+            }
+            var blob = png.write();
+            var url = URL.createObjectURL(blob);
+            var img = document.getElementById('target');
+            img.src = url;
+            start = end;
+            end = Math.max(start - 10, 0);
+        }, 250);
+    };
+
     var showImage = function (file) {
         clearPreviousImage();
         var img = document.createElement('img');
         img.src = URL.createObjectURL(file);
-        img.className = 'target';
+        img.id = 'target';
         img.addEventListener('load', function (e) {
             var width = img.width;
             var height = img.height;
@@ -73,29 +97,9 @@
             URL.revokeObjectURL(img.src);
         }, false);
         var glitchButton = document.getElementById('glitch-button');
-        glitchButton.addEventListener('click', function (ev) {
-            glitchButton.disabled = true;
-            var glitch = function (png) {
-                var start = png.height - 1;
-                var end = Math.max(start - 10, 0);
-                var cid = setInterval(function () {
-                    if (start === 0) {
-                        clearInterval(cid);
-                        glitchButton.disabled = false;
-                        alert('finished!');
-                        return;
-                    }
-                    for (var i = start; i > end; --i) {
-                        png.getline(i)[0] = PNG.FILTER_PAETH;
-                    }
-                    var blob = png.write();
-                    var url = URL.createObjectURL(blob);
-                    img.src = url;
-                    start = end;
-                    end = Math.max(start - 10, 0);
-                }, 250);
-            };
+        glitchButton.addEventListener('click', function handler (ev) {
             processImage(file, glitch);
+            glitchButton.removeEventListener('click', handler, false);
         }, false);
         var insertPoint = document.getElementById('right');
         insertPoint.appendChild(img);
