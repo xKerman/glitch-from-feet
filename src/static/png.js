@@ -322,7 +322,9 @@
                 break;
             }
         });
-        return this._bb.getBlob();
+        var result = this._bb.getBlob();
+        this._bb = new BlobBuilder();
+        return result;
     };
     PNGWriter.prototype._writeSignature = function () {
         var arraybuf = new ArrayBuffer(8);
