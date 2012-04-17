@@ -164,6 +164,10 @@
             return;
         }
         targetFile = dt.files[0];
+        if (!/^image\//.test(targetFile.type)) {
+            alert('This file is not image.');
+            return;
+        }
         showImage(targetFile);
     }, false);
     var glitchButton = document.getElementById('glitch-button');
