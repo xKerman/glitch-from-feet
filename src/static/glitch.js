@@ -56,19 +56,23 @@
         }
     };
 
-    var glitch = function (png) {
-        var start = png.height - 1;
-        var end = Math.max(start - 10, 0);
+    var removeGlitchButton = function () {
         var glitchButton = document.getElementById('glitch-button');
-        var id = setInterval(function () {
+        var cid = setInterval(function () {
             var opacity = glitchButton.style.opacity;
             if (opacity <= 0) {
-                clearInterval(id);
+                clearInterval(cid);
                 return;
             }
             glitchButton.style.opacity = opacity - 0.1;
         }, 20);
         glitchButton.disabled = true;
+    };
+
+    var glitch = function (png) {
+        var start = png.height - 1;
+        var end = Math.max(start - 10, 0);
+        removeGlitchButton();
         var cid = setInterval(function () {
             if (start <= 0) {
                 clearInterval(cid);
