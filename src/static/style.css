@@ -24,3 +24,7 @@ body {
 #glitch-button {
     opacity: 0;
 }
+
+#download-button {
+    opacity: 0;
+}

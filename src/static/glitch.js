@@ -71,6 +71,34 @@
         glitchButton.disabled = true;
     };
 
+    var download = function (blob, filename) {
+        var a = document.createElement('a');
+        a.style.opacity = 0;
+        if ('download' in a) {
+            a.download = filename;
+            a.href = URL.createObjectURL(blob);
+            document.body.appendChild(a);
+            var event = document.createEvent('MouseEvents');
+            event.initMouseEvent('click', true, true, window, 0, 0, 0, 0, 0,
+                                 false, false, false, false, 0, null);
+            a.dispatchEvent(event);
+            document.body.removeChild(a);
+            return;
+        }
+        var reader = new FileReader();
+        reader.onload = function (e) {
+            var url = e.target.result;
+            a.href = url.replace(/^data:image\/png/, 'data:application/octet-stream');
+            document.body.appendChild(a);
+            var event = document.createEvent('MouseEvents');
+            event.initMouseEvent('click', true, true, window, 0, 0, 0, 0, 0,
+                                 false, false, false, false, 0, null);
+            a.dispatchEvent(event);
+            document.body.removeChild(a);
+        };
+        reader.readAsDataURL(blob);
+    };
+
     var glitch = function (png) {
         var start = png.height - 1;
         var end = Math.max(start - 10, 0);
@@ -78,7 +106,10 @@
         var cid = setInterval(function () {
             if (start <= 0) {
                 clearInterval(cid);
-                alert('finished!');
+                var downloadButton = document.getElementById('download-button');
+                downloadButton.style.opacity = 1;
+                downloadButton.disabled = false;
+                downloadFile = png.write();
                 return;
             }
             for (var i = start; i > end; --i) {
@@ -97,6 +128,9 @@
         var glitchButton = document.getElementById('glitch-button');
         glitchButton.style.opacity = 1;
         glitchButton.disabled = false;
+        var downloadButton = document.getElementById('download-button');
+        downloadButton.style.opacity = 0;
+        downloadButton.disabled = true;
         clearPreviousImage();
         var img = document.createElement('img');
         img.src = URL.createObjectURL(file);
@@ -118,7 +152,8 @@
 
 
     var dropCircle = document.getElementById('canvas-container');
-    var target_file;
+    var targetFile;
+    var downloadFile;
     dropCircle.addEventListener('dragenter', stopEvent, false);
     dropCircle.addEventListener('dragover', stopEvent, false);
     dropCircle.addEventListener('drop', function (e) {
@@ -127,11 +162,17 @@
         if (dt.files.length != 1) {
             return;
         }
-        target_file = dt.files[0];
-        showImage(target_file);
+        targetFile = dt.files[0];
+        showImage(targetFile);
     }, false);
     var glitchButton = document.getElementById('glitch-button');
-    glitchButton.addEventListener('click', function handler (ev) {
-        processImage(target_file, glitch);
+    glitchButton.addEventListener('click', function (ev) {
+        processImage(targetFile, glitch);
+    }, false);
+    var downloadButton = document.getElementById('download-button');
+    downloadButton.addEventListener('click', function (ev) {
+        var filename = 'glitched_' + targetFile.name;
+        filename = filename.replace(/\.\w+$/, '.png');
+        download(downloadFile, filename);
     }, false);
 }());
