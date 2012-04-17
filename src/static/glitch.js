@@ -95,7 +95,6 @@
         var img = document.createElement('img');
         img.src = URL.createObjectURL(file);
         img.id = 'target';
-        img.style.opacity = 0;
         img.addEventListener('load', function (e) {
             var width = img.width;
             var height = img.height;
@@ -105,12 +104,7 @@
             else {
                 img.height = Math.min(height, 500);
             }
-            img.style.opacity = 1;
             URL.revokeObjectURL(img.src);
-        }, false);
-        glitchButton.addEventListener('click', function handler (ev) {
-            processImage(file, glitch);
-            glitchButton.removeEventListener('click', handler, false);
         }, false);
         var insertPoint = document.getElementById('canvas-container');
         insertPoint.appendChild(img);
@@ -118,6 +112,7 @@
 
 
     var dropCircle = document.getElementById('canvas-container');
+    var target_file;
     dropCircle.addEventListener('dragenter', stopEvent, false);
     dropCircle.addEventListener('dragover', stopEvent, false);
     dropCircle.addEventListener('drop', function (e) {
@@ -126,7 +121,11 @@
         if (dt.files.length != 1) {
             return;
         }
-        var file = dt.files[0];
-        showImage(file);
+        target_file = dt.files[0];
+        showImage(target_file);
+    }, false);
+    var glitchButton = document.getElementById('glitch-button');
+    glitchButton.addEventListener('click', function handler (ev) {
+        processImage(target_file, glitch);
     }, false);
 }());
