@@ -1,5 +1,10 @@
 /* -*- coding: utf-8 -*- */
 
+body {
+    background: white;
+    font-color: black;
+}
+
 #container {
     width: 100%;
     margin: 30px 0 0;
@@ -12,7 +17,7 @@
     vertical-align: middle;
     border: solid 5px gray;
     border-radius: 1em;
-    height: 500px;
+    height: 550px;
     width: 640px;
 }
 
