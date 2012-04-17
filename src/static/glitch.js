@@ -58,13 +58,15 @@
 
     var removeGlitchButton = function () {
         var glitchButton = document.getElementById('glitch-button');
+        var count = 0;
         var cid = setInterval(function () {
-            var opacity = glitchButton.style.opacity;
-            if (opacity <= 0) {
+            if (count >= 10) {
                 clearInterval(cid);
+                glitchButton.style.opacity = 0;
                 return;
             }
-            glitchButton.style.opacity = opacity - 0.1;
+            count += 1;
+            glitchButton.style.opacity = 1 - 0.1 * count;
         }, 20);
         glitchButton.disabled = true;
     };
