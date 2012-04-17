@@ -100,8 +100,9 @@
     };
 
     var glitch = function (png) {
+        var glitchHeight = Math.max(Math.ceil(png.height * 0.03), 10);
         var start = png.height - 1;
-        var end = Math.max(start - 10, 0);
+        var end = Math.max(start - glitchHeight, 0);
         removeGlitchButton();
         var cid = setInterval(function () {
             if (start <= 0) {
@@ -120,7 +121,7 @@
             var img = document.getElementById('target');
             img.src = url;
             start = end;
-            end = Math.max(start - 10, 0);
+            end = Math.max(start - glitchHeight, 0);
         }, 250);
     };
 
