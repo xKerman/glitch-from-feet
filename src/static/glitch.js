@@ -5,6 +5,10 @@
 
 
     var URL = window.URL || window.webkitURL;
+    var requestAnimationFrame = window.requestAnimationFrame ||
+            window.mozRequestAnimationFrame ||
+            window.webkitRequestAnimationFrame ||
+            window.msRequestAnimationFrame;
 
     var stopEvent = function (event) {
         event.stopPropagation();
@@ -58,16 +62,17 @@
 
     var removeGlitchButton = function () {
         var glitchButton = document.getElementById('glitch-button');
-        var count = 0;
-        var cid = setInterval(function () {
-            if (count >= 10) {
-                clearInterval(cid);
+        var start = Date.now();
+        var step = function (timestamp) {
+            var opacity = (timestamp - start) / 200;
+            if (opacity > 1) {
                 glitchButton.style.opacity = 0;
                 return;
             }
-            count += 1;
-            glitchButton.style.opacity = 1 - 0.1 * count;
-        }, 20);
+            glitchButton.style.opacity = 1 - opacity;
+            requestAnimationFrame(step);
+        };
+        requestAnimationFrame(step);
         glitchButton.disabled = true;
     };
 
