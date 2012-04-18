@@ -71,30 +71,47 @@
         glitchButton.disabled = true;
     };
 
+    var emulateClick = function (link) {
+        var event = document.createEvent('MouseEvents');
+        document.body.appendChild(link);
+        event.initMouseEvent('click', true, true, window, 0, 0, 0, 0, 0,
+                             false, false, false, false, 0, null);
+        link.dispatchEvent(event);
+        document.body.removeChild(link);
+    };
+
     var download = function (blob, filename) {
         var a = document.createElement('a');
         a.style.opacity = 0;
         if ('download' in a) {
             a.download = filename;
             a.href = URL.createObjectURL(blob);
-            document.body.appendChild(a);
-            var event = document.createEvent('MouseEvents');
-            event.initMouseEvent('click', true, true, window, 0, 0, 0, 0, 0,
-                                 false, false, false, false, 0, null);
-            a.dispatchEvent(event);
-            document.body.removeChild(a);
+            emulateClick(a);
+            URL.revokeObjectURL(a.href);
             return;
         }
         var reader = new FileReader();
+        var progress = document.createElement('progress');
+        progress.max = 1.0;
+        progress.value = 0.0;
+        var insertPoint = document.getElementById('button-container');
+        insertPoint.appendChild(progress);
+        reader.onloadstart = function (e) {
+            progress.value = 0.0;
+        };
+        reader.onprogress = function (e) {
+            progress.value = e.loaded / e.total;
+        };
         reader.onload = function (e) {
             var url = e.target.result;
             a.href = url.replace(/^data:image\/png/, 'data:application/octet-stream');
-            document.body.appendChild(a);
-            var event = document.createEvent('MouseEvents');
-            event.initMouseEvent('click', true, true, window, 0, 0, 0, 0, 0,
-                                 false, false, false, false, 0, null);
-            a.dispatchEvent(event);
-            document.body.removeChild(a);
+            progress.value = 1.0;
+            emulateClick(a);
+        };
+        reader.onloadend = function (e) {
+            setTimeout(function () {
+                insertPoint.removeChild(progress);
+            }, 1500);
         };
         reader.readAsDataURL(blob);
     };
