@@ -35,7 +35,7 @@
     })();
 
     zlib.deflate = function (data) {
-        var ibytes = jz.utils.arrayBufferToBytes(data);
+        var ibytes = jz.utils.toBytes(data);
         var length = ibytes.length;
         var len;
         var ioffset = 0;
