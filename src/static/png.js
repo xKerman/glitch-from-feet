@@ -106,21 +106,158 @@
     PNG.isPNG = function (file) {
         return /image\/png/i.test(file.type);
     };
+    PNG.noneFilter = function (curline, prevline, bpp) {
+        return curline;
+    };
+    PNG.subFilter = function (curline, prevline, bpp) {
+        var len = curline.length;
+        var result = new Uint8Array(len);
+        var left = 0;
+        for (var i = 0; i < len; ++i) {
+            left = (i - bpp < 0)? 0: curline[i - bpp];
+            result[i] = curline[i] - left;
+        }
+        return result;
+    };
+    PNG.upFilter = function (curline, prevline, bpp) {
+        if (prevline === null) {
+            return curline;
+        }
+        var len = curline.length;
+        var result = new Uint8Array(len);
+        for (var i = 0; i < len; ++i) {
+            result[i] = curline[i] - prevline[i];
+        }
+        return result;
+    };
+    PNG.averageFilter = function (curline, prevline, bpp) {
+        var len = curline.length;
+        var result = new Uint8Array(len);
+        var left = 0;
+        prevline = prevline || new Uint8Array(len);
+        for (var i = 0; i < len; ++i) {
+            left = (i - bpp < 0)? 0: curline[i-bpp];
+            result[i] = curline[i] - Math.floor((left + prevline[i]) / 2);
+        }
+        return result;
+    };
+    PNG.paethFilter = function (curline, prevline, bpp) {
+        var len = curline.length;
+        var result = new Uint8Array(len);
+        var left = 0;
+        var adove = 0;
+        var upperleft = 0;
+        var p = 0;
+        var pa = 0;
+        var pb = 0;
+        var pc = 0;
+        var predicted = 0;
+        prevline = prevline || new Uint8Array(curline.length);
+        for (var i = 0; i < len; ++i) {
+            if (i - bpp < 0) {
+                left = 0;
+                upperleft = 0;
+            }
+            else {
+                left = curline[i - bpp];
+                upperleft = prevline[i - bpp];
+            }
+            adove = prevline[i];
+            p = left + adove - upperleft;
+            pa = Math.abs(p - left);
+            pb = Math.abs(p - adove);
+            pc = Math.abs(p - upperleft);
+            if (pa <= pb && pa <= pc) {
+                predicted = left;
+            }
+            else if (pb <= pc) {
+                predicted = adove;
+            }
+            else {
+                predicted = upperleft;
+            }
+            result[i] = curline[i] - predicted;
+        }
+        return result;
+    };
+    PNG.chooseFilter = function (curline, prevline, bpp, filterToUse) {
+        var filterFuncs = Object.create(null);
+        filterToUse = filterToUse || [PNG.FILTER_NONE, PNG.FILTER_SUB,
+                                      PNG.FILTER_UP, PNG.FILTER_AVERAGE,
+                                      PNG.FILTER_PAETH];
+        filterToUse.forEach(function (filter) {
+            switch (filter) {
+            case PNG.FILTER_NONE:
+                filterFuncs[filter] = PNG.noneFilter;
+                break;
+            case PNG.FILTER_SUB:
+                filterFuncs[filter] = PNG.subFilter;
+                break;
+            case PNG.FILTER_UP:
+                filterFuncs[filter] = PNG.upFilter;
+                break;
+            case PNG.FILTER_AVERAGE:
+                filterFuncs[filter] = PNG.averageFilter;
+                break;
+            case PNG.FILTER_PAETH:
+                filterFuncs[filter] = PNG.paethFilter;
+                break;
+            }
+        });
+        var filterFunc;
+        var minsum = Infinity;
+        var sum = 0;
+        var resultline;
+        var i;
+        var choosenFilter;
+        var choosenLine;
+        var hasOwn = Object.prototype.hasOwnProperty;
+        for (var filter in filterFuncs) {
+            if (!hasOwn.call(filterFuncs, filter)) {
+                continue;
+            }
+            filterFunc = filterFuncs[filter];
+            resultline = filterFunc(curline, prevline, bpp);
+            for (i = 0; i < resultline.length; ++i) {
+                sum += resultline[i];
+            }
+            if (sum < minsum) {
+                choosenFilter = filter;
+                choosenLine = resultline;
+                minsum = sum;
+            }
+            sum = 0;
+        }
+        return {
+            filter: choosenFilter,
+            line: choosenLine
+        };
+    };
     PNG.fromCanvas = function (canvas) {
         var context = canvas.getContext('2d');
         var width = canvas.width;
         var height = canvas.height;
-        var imageData = context.getImageData(0, 0, width, height);
-        var pixels = imageData.data;
-        var raw = new Uint8Array((1 + width * 3) * height);
-        var linelength = width * 3;
+        var pixels = context.getImageData(0, 0, width, height).data;
+        var rgb = new Uint8Array(width * 3 * height);
+        for (var i = 0, o = 0, len = pixels.length; i < len; i += 4, o += 3) {
+            rgb[o + 0] = pixels[i + 0];
+            rgb[o + 1] = pixels[i + 1];
+            rgb[o + 2] = pixels[i + 2];
+        }
+        var bpp = 3;
+        var ilinelength = 3 * width;
+        var olinelength = 1 + width * 3;
+        var raw = new Uint8Array(height * olinelength);
+        var prevline;
+        var curline;
+        var result;
+        var filters = [PNG.FILTER_SUB, PNG.FILTER_UP, PNG.FILTER_AVERAGE];
         for (var y = 0; y < height; ++y) {
-            raw[y * (linelength + 1)] = PNG.FILTER_NONE;
-            for (var ix = 0, ox = 1; ix < width * 4; ix += 4, ox += 3) {
-                raw[y * (linelength + 1) + ox + 0] = pixels[(y * width * 4) + ix + 0];
-                raw[y * (linelength + 1) + ox + 1] = pixels[(y * width * 4) + ix + 1];
-                raw[y * (linelength + 1) + ox + 2] = pixels[(y * width * 4) + ix + 2];
-            }
+            prevline = (y === 0)? null: rgb.subarray((y - 1) * ilinelength, y * ilinelength);
+            curline = rgb.subarray(y * ilinelength, (y + 1) * ilinelength);
+            result = PNG.chooseFilter(curline, prevline, bpp, filters);
+            raw[y * olinelength] = result.filter;
+            raw.set(result.line, y * olinelength + 1);
         }
         var png = {
             header: {
