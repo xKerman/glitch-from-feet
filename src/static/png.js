@@ -11,7 +11,7 @@
         // crc32([0x00, 0x00, 0x02, 0x00, 0x00, 0x00, 0x02,0x00, 0x08, 0x02, 0x00, 0x00, 0x00], -1465799158) =>  2065318829
         var table = (function () {
             var poly = 0xEDB88320;
-            var table = new Uint32Array(new ArrayBuffer(1024));
+            var table = new Uint32Array(1024);
             var u, i, j;
             for(i = 0; i < 256; ++i){
                 u = i;
@@ -21,19 +21,19 @@
                 table[i] = u;
             }
             return table;
-        })();
+        }());
 
         return function (buffer, start) {
             var result = start || 0;
             var bytes = (buffer instanceof Uint8Array)? buffer: new Uint8Array(buffer);
-            var i, n, t = table;
+            var t = table;
             result = ~result;
-            for(i = 0, n = bytes.length; i < n; ++i)
+            for (var i = 0, len = bytes.length; i < len; ++i) {
                 result = (result >>> 8) ^ t[(bytes[i] ^ result) & 0xFF];
+            }
             return ~result;
         };
     }());
-
     zlib.adler32 = function (data) {
         var bytes = (data instanceof Uint8Array)? data: new Uint8Array(data);
         var a = 1;
@@ -82,7 +82,6 @@
         }
         return result;
     };
-
     zlib.compress = function (data) {
         var cm = 8;
         var cinfo = 7;
@@ -93,9 +92,7 @@
         var fcheck = 31 - (cmf * 256 + flg) % 31;
         flg |= fcheck;
         var compressed = zlib.deflate(data);
-        console.time('adler32');
         var checksum = zlib.adler32(data);
-        console.timeEnd('adler32');
         var iview = new Uint8Array(compressed);
         var result = new ArrayBuffer(2 + iview.length + 4);
         var resultView = new DataView(result);
