@@ -42,24 +42,6 @@
         }, false);
     };
 
-    var processImage = function (file, callback) {
-        if (!/^image\//.test(file.type)) {
-            return;
-        }
-        if (PNG.isPNG(file)) {
-            var reader = new FileReader();
-            reader.onload = function (ev) {
-                var buffer = ev.target.result;
-                var png = PNG(buffer);
-                callback(png);
-            };
-            reader.readAsArrayBuffer(file);
-        }
-        else {
-            loadImageAsPNG(file, callback);
-        }
-    };
-
     var removeGlitchButton = function () {
         var glitchButton = document.getElementById('glitch-button');
         var start = Date.now();
@@ -194,7 +176,7 @@
     }, false);
     var glitchButton = document.getElementById('glitch-button');
     glitchButton.addEventListener('click', function (ev) {
-        processImage(targetFile, glitch);
+        loadImageAsPNG(targetFile, glitch);
     }, false);
     var downloadButton = document.getElementById('download-button');
     downloadButton.addEventListener('click', function (ev) {
