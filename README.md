@@ -3,7 +3,6 @@
 使用しているライブラリ
 
 * ffDataView (<https://github.com/ukyo/ffDataView>)
-* jsziptools (<https://github.com/ukyo/jsziptools>)
 
 
 # デモ #

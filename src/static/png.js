@@ -3,16 +3,16 @@
 (function (global) {
     'use strict';
 
-    var zlib = jz.zlib;
     // var crc32 = jz.algorithms.crc32;
     var BlobBuilder = global.BlobBuilder || global.MozBlobBuilder || global.WebKitBlobBuilder;
 
-    var crc32 = (function(){
+    var zlib = {};
+    zlib.crc32 = (function(){
         // crc32([0x00, 0x00, 0x02, 0x00, 0x00, 0x00, 0x02,0x00, 0x08, 0x02, 0x00, 0x00, 0x00], -1465799158) =>  2065318829
-        var table = (function(){
-            var poly = 0xEDB88320,
-                table = new Uint32Array(new ArrayBuffer(1024)),
-                u, i, j;
+        var table = (function () {
+            var poly = 0xEDB88320;
+            var table = new Uint32Array(new ArrayBuffer(1024));
+            var u, i, j;
             for(i = 0; i < 256; ++i){
                 u = i;
                 for(j = 0; j < 8; ++j){
@@ -23,19 +23,40 @@
             return table;
         })();
 
-        return function(buffer, start){
+        return function (buffer, start) {
             var result = start || 0;
-            var bytes = new Uint8Array(buffer);
+            var bytes = (buffer instanceof Uint8Array)? buffer: new Uint8Array(buffer);
             var i, n, t = table;
             result = ~result;
             for(i = 0, n = bytes.length; i < n; ++i)
                 result = (result >>> 8) ^ t[(bytes[i] ^ result) & 0xFF];
             return ~result;
         };
-    })();
+    }());
+
+    zlib.adler32 = function (data) {
+        var bytes = (data instanceof Uint8Array)? data: new Uint8Array(data);
+        var a = 1;
+        var b = 0;
+        var base = 65521;
+        var len = bytes.length;
+        var tlen = 5550;
+        var i = 0;
+        while (len) {
+            tlen = Math.min(5550, len);
+            len -= tlen;
+            for (i = 0; i < tlen; ++i) {
+                a += bytes[i];
+                b += a;
+            }
+            a %= base;
+            b %= base;
+        }
+        return (b << 16) | a;
+    };
 
     zlib.deflate = function (data) {
-        var ibytes = jz.utils.toBytes(data);
+        var ibytes = (data instanceof Uint8Array)? data: new Uint8Array(data);
         var length = ibytes.length;
         var len;
         var ioffset = 0;
@@ -72,7 +93,9 @@
         var fcheck = 31 - (cmf * 256 + flg) % 31;
         flg |= fcheck;
         var compressed = zlib.deflate(data);
-        var checksum = jz.algorithms.adler32(data);
+        console.time('adler32');
+        var checksum = zlib.adler32(data);
+        console.timeEnd('adler32');
         var iview = new Uint8Array(compressed);
         var result = new ArrayBuffer(2 + iview.length + 4);
         var resultView = new DataView(result);
@@ -488,10 +511,10 @@
     PNGWriter.prototype._writeChecksum = function (data, type) {
         var slice = Array.prototype.slice;
         var t = slice.call(type).map(function (s) { return s.charCodeAt(0); });
-        var start = crc32(t);
+        var start = zlib.crc32(t);
         var arraybuf = new ArrayBuffer(4);
         var dataview = new DataView(arraybuf);
-        var checksum = crc32(new Uint8Array(data), start);
+        var checksum = zlib.crc32(new Uint8Array(data), start);
         dataview.setInt32(0, checksum, false);
         this._bb.append(arraybuf);
     };
