@@ -45,16 +45,15 @@
         while (len) {
             tlen = Math.min(5550, len);
             len -= tlen;
-            for (i = 0; i < tlen; ++i) {
-                a += bytes[i];
+            do {
+                a += bytes[i++];
                 b += a;
-            }
+            } while (--tlen);
             a %= base;
             b %= base;
         }
-        return (b << 16) | a;
+        return ((b << 16) | a) >>> 0;
     };
-
     zlib.deflate = function (data) {
         var ibytes = (data instanceof Uint8Array)? data: new Uint8Array(data);
         var length = ibytes.length;
