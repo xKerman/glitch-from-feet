@@ -9,27 +9,48 @@
     var zlib = {};
     zlib.crc32 = (function(){
         // crc32([0x00, 0x00, 0x02, 0x00, 0x00, 0x00, 0x02,0x00, 0x08, 0x02, 0x00, 0x00, 0x00], -1465799158) =>  2065318829
+        // slicing-by-4 algorithm
         var table = (function () {
             var poly = 0xEDB88320;
-            var table = new Uint32Array(1024);
+            var table = new Uint32Array(256 * 4);
             var u, i, j;
-            for(i = 0; i < 256; ++i){
+            for (i = 0; i < 256; ++i) {
                 u = i;
-                for(j = 0; j < 8; ++j){
+                for(j = 0; j < 8; ++j) {
                     u = u & 1 ? (u >>> 1) ^ poly : u >>> 1;
                 }
                 table[i] = u;
             }
+            for (i = 0; i < 256; ++i) {
+                table[1 * 256 + i] = (table[0 * 256 + i] >>> 8) ^ table[0 * 256 + table[0 * 256 + i] & 0xFF];
+                table[2 * 256 + i] = (table[1 * 256 + i] >>> 8) ^ table[0 * 256 + table[1 * 256 + i] & 0xFF];
+                table[3 * 256 + i] = (table[2 * 256 + i] >>> 8) ^ table[0 * 256 + table[2 * 256 + i] & 0xFF];
+            }
             return table;
         }());
 
-        return function (buffer, start) {
+        return function (array, start) {
             var result = start || 0;
-            var bytes = (buffer instanceof Uint8Array)? buffer: new Uint8Array(buffer);
+            var buffer = array.buffer || array;
+            var byteLength = buffer.byteLength;
+            var bytes = (array instanceof Uint32Array)? array: new Uint32Array(buffer, 0, Math.floor(byteLength / 4));
             var t = table;
+            var i = 0;
+            var len = bytes.length;
             result = ~result;
-            for (var i = 0, len = bytes.length; i < len; ++i) {
-                result = (result >>> 8) ^ t[(bytes[i] ^ result) & 0xFF];
+            for (i = 0; i < len; ++i) {
+                result ^= bytes[i];
+                result = (t[3 * 256 + (result & 0xFF)] ^
+                          t[2 * 256 + ((result >>> 8) & 0xFF)] ^
+                          t[1 * 256 + ((result >>> 16) & 0xFF)] ^
+                          t[0 * 256 + (result >>> 24)]);
+            }
+            if (byteLength % 4 === 0) {
+                return ~result;
+            }
+            var remainedBytes = new Uint8Array(buffer, i * 4, byteLength % 4);
+            for (i = 0, len = remainedBytes.length; i < len; ++i) {
+                result = (result >>> 8) ^ t[0 * 256 + ((result & 0xFF) ^ remainedBytes[i])];
             }
             return ~result;
         };
@@ -506,7 +527,7 @@
     };
     PNGWriter.prototype._writeChecksum = function (data, type) {
         var slice = Array.prototype.slice;
-        var t = slice.call(type).map(function (s) { return s.charCodeAt(0); });
+        var t = new Uint8Array(slice.call(type).map(function (s) { return s.charCodeAt(0); }));
         var start = zlib.crc32(t);
         var arraybuf = new ArrayBuffer(4);
         var dataview = new DataView(arraybuf);
