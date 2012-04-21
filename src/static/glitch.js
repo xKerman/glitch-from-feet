@@ -104,10 +104,9 @@
     };
 
     var glitch = function (png) {
-        var glitchHeight = Math.max(Math.ceil(png.height * 0.03), 10);
+        var glitchHeight = Math.max(Math.ceil(png.height * 0.01), 5);
         var start = png.height - 1;
         var end = Math.max(start - glitchHeight, 0);
-        removeGlitchButton();
         var cid = setInterval(function () {
             if (start <= 0) {
                 clearInterval(cid);
@@ -117,7 +116,7 @@
                 downloadFile = png.write();
                 return;
             }
-            for (var i = start; i > end; --i) {
+            for (var i = start; i >= end; --i) {
                 png.getline(i)[0] = PNG.FILTER_PAETH;
             }
             var blob = png.write();
@@ -126,7 +125,7 @@
             img.src = url;
             start = end;
             end = Math.max(start - glitchHeight, 0);
-        }, 250);
+        }, 100);
     };
 
     var showImage = function (file) {
@@ -176,6 +175,7 @@
     }, false);
     var glitchButton = document.getElementById('glitch-button');
     glitchButton.addEventListener('click', function (ev) {
+        removeGlitchButton();
         loadImageAsPNG(targetFile, glitch);
     }, false);
     var downloadButton = document.getElementById('download-button');
