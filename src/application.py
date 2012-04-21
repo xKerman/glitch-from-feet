@@ -10,10 +10,9 @@ app = flask.Flask(__name__)
 def index():
     return flask.render_template('index.html')
 
-@app.route('/2')
-def index2():
-    return flask.render_template('index2.html')
-
+@app.route('/test')
+def test():
+    return flask.render_template('test.html')
 
 if __name__ == '__main__':
     app.run(debug=True)

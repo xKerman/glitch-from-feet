@@ -548,5 +548,6 @@
         this._writeChecksum(compressed, 'IDAT');
     };
 
+    global.zlib = zlib;
     global.PNG = PNG;
 }(Function('return this;')()));
