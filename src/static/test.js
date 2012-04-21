@@ -5,9 +5,10 @@
 
     module('zlib');
     test('crc32', function () {
-        equal(0, zlib.crc32(new Uint8Array(0)));
-        equal(-1465799158, zlib.crc32(new Uint8Array([73, 72, 68, 82])));
-        equal(2065318829, zlib.crc32(new Uint8Array([0x00, 0x00, 0x02, 0x00, 0x00, 0x00, 0x02,0x00, 0x08, 0x02, 0x00, 0x00, 0x00]), -1465799158));
+        equal(zlib.crc32(new Uint8Array(0)), 0);
+        equal(zlib.crc32(new Uint8Array([73, 72, 68, 82])), -1465799158);
+        equal(zlib.crc32(new Uint8Array([0, 0, 2, 0, 0, 0, 2, 0, 8, 2, 0, 0, 0]), -1465799158), 2065318829);
+        equal(zlib.crc32(new Uint8Array([73, 72, 68, 82, 0, 0, 2, 0, 0, 0, 2, 0, 8, 2, 0, 0, 0])), 2065318829);
     });
     test('crc32 random', function () {
         var crc32Simple = function (data, start) {
@@ -41,7 +42,7 @@
             for (j = 0; j < length; ++j) {
                 data[j] = j;
             }
-            equal(crc32Simple(data), zlib.crc32(data), 'length = ' + length);
+            equal(zlib.crc32(data), crc32Simple(data), 'length = ' + length);
         }
     });
     test('adler32', function () {
