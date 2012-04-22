@@ -42,24 +42,6 @@
         }, false);
     };
 
-    var processImage = function (file, callback) {
-        if (!/^image\//.test(file.type)) {
-            return;
-        }
-        if (PNG.isPNG(file)) {
-            var reader = new FileReader();
-            reader.onload = function (ev) {
-                var buffer = ev.target.result;
-                var png = PNG(buffer);
-                callback(png);
-            };
-            reader.readAsArrayBuffer(file);
-        }
-        else {
-            loadImageAsPNG(file, callback);
-        }
-    };
-
     var removeGlitchButton = function () {
         var glitchButton = document.getElementById('glitch-button');
         var start = Date.now();
@@ -122,29 +104,36 @@
     };
 
     var glitch = function (png) {
-        var glitchHeight = Math.max(Math.ceil(png.height * 0.03), 10);
+        glitching = true;
+        var interval = (function () {
+            var start = Date.now();
+            png.write();
+            var end = Date.now();
+            return Math.max((end - start) * 2, 100);
+        }());
+        var glitchHeight = Math.max(Math.ceil(png.height * (interval / 10000)), 5);
         var start = png.height - 1;
         var end = Math.max(start - glitchHeight, 0);
-        removeGlitchButton();
+        var img = document.getElementById('target');
         var cid = setInterval(function () {
-            if (start <= 0) {
+            if (start < 0) {
                 clearInterval(cid);
                 var downloadButton = document.getElementById('download-button');
                 downloadButton.style.opacity = 1;
                 downloadButton.disabled = false;
                 downloadFile = png.write();
+                glitching = false;
                 return;
             }
-            for (var i = start; i > end; --i) {
+            for (var i = start; i >= end; --i) {
                 png.getline(i)[0] = PNG.FILTER_PAETH;
             }
             var blob = png.write();
             var url = URL.createObjectURL(blob);
-            var img = document.getElementById('target');
             img.src = url;
-            start = end;
+            start = end - 1;
             end = Math.max(start - glitchHeight, 0);
-        }, 250);
+        }, interval);
     };
 
     var showImage = function (file) {
@@ -177,10 +166,14 @@
     var dropCircle = document.getElementById('canvas-container');
     var targetFile;
     var downloadFile;
+    var glitching = false;
     dropCircle.addEventListener('dragenter', stopEvent, false);
     dropCircle.addEventListener('dragover', stopEvent, false);
     dropCircle.addEventListener('drop', function (e) {
         stopEvent(e);
+        if (glitching) {
+            return;
+        }
         var dt = e.dataTransfer;
         if (dt.files.length != 1) {
             return;
@@ -194,7 +187,8 @@
     }, false);
     var glitchButton = document.getElementById('glitch-button');
     glitchButton.addEventListener('click', function (ev) {
-        processImage(targetFile, glitch);
+        removeGlitchButton();
+        loadImageAsPNG(targetFile, glitch);
     }, false);
     var downloadButton = document.getElementById('download-button');
     downloadButton.addEventListener('click', function (ev) {

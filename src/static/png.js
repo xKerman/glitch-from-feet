@@ -3,39 +3,80 @@
 (function (global) {
     'use strict';
 
-    var zlib = jz.zlib;
     // var crc32 = jz.algorithms.crc32;
     var BlobBuilder = global.BlobBuilder || global.MozBlobBuilder || global.WebKitBlobBuilder;
 
-    var crc32 = (function(){
+    var zlib = {};
+    zlib.crc32 = (function(){
         // crc32([0x00, 0x00, 0x02, 0x00, 0x00, 0x00, 0x02,0x00, 0x08, 0x02, 0x00, 0x00, 0x00], -1465799158) =>  2065318829
-        var table = (function(){
-            var poly = 0xEDB88320,
-                table = new Uint32Array(new ArrayBuffer(1024)),
-                u, i, j;
-            for(i = 0; i < 256; ++i){
+        // slicing-by-4 algorithm
+        var table = (function () {
+            var poly = 0xEDB88320;
+            var table = new Uint32Array(256 * 4);
+            var u, i, j;
+            for (i = 0; i < 256; ++i) {
                 u = i;
-                for(j = 0; j < 8; ++j){
+                for(j = 0; j < 8; ++j) {
                     u = u & 1 ? (u >>> 1) ^ poly : u >>> 1;
                 }
                 table[i] = u;
             }
+            for (i = 0; i < 256; ++i) {
+                table[1 * 256 + i] = (table[0 * 256 + i] >>> 8) ^ table[0 * 256 + table[0 * 256 + i] & 0xFF];
+                table[2 * 256 + i] = (table[1 * 256 + i] >>> 8) ^ table[0 * 256 + table[1 * 256 + i] & 0xFF];
+                table[3 * 256 + i] = (table[2 * 256 + i] >>> 8) ^ table[0 * 256 + table[2 * 256 + i] & 0xFF];
+            }
             return table;
-        })();
+        }());
 
-        return function(buffer, start){
+        return function (array, start) {
             var result = start || 0;
-            var bytes = new Uint8Array(buffer);
-            var i, n, t = table;
+            var buffer = array.buffer || array;
+            var byteLength = buffer.byteLength;
+            var bytes = (array instanceof Uint32Array)? array: new Uint32Array(buffer, 0, Math.floor(byteLength / 4));
+            var t = table;
+            var i = 0;
+            var len = bytes.length;
             result = ~result;
-            for(i = 0, n = bytes.length; i < n; ++i)
-                result = (result >>> 8) ^ t[(bytes[i] ^ result) & 0xFF];
+            for (i = 0; i < len; ++i) {
+                result ^= bytes[i];
+                result = (t[3 * 256 + (result & 0xFF)] ^
+                          t[2 * 256 + ((result >>> 8) & 0xFF)] ^
+                          t[1 * 256 + ((result >>> 16) & 0xFF)] ^
+                          t[0 * 256 + (result >>> 24)]);
+            }
+            if (byteLength % 4 === 0) {
+                return ~result;
+            }
+            var remainedBytes = new Uint8Array(buffer, i * 4, byteLength % 4);
+            for (i = 0, len = remainedBytes.length; i < len; ++i) {
+                result = (result >>> 8) ^ t[0 * 256 + ((result & 0xFF) ^ remainedBytes[i])];
+            }
             return ~result;
         };
-    })();
-
+    }());
+    zlib.adler32 = function (data) {
+        var bytes = (data instanceof Uint8Array)? data: new Uint8Array(data);
+        var a = 1;
+        var b = 0;
+        var base = 65521;
+        var len = bytes.length;
+        var tlen = 5550;
+        var i = 0;
+        while (len) {
+            tlen = Math.min(5550, len);
+            len -= tlen;
+            do {
+                a += bytes[i++];
+                b += a;
+            } while (--tlen);
+            a %= base;
+            b %= base;
+        }
+        return ((b << 16) | a) >>> 0;
+    };
     zlib.deflate = function (data) {
-        var ibytes = jz.utils.toBytes(data);
+        var ibytes = (data instanceof Uint8Array)? data: new Uint8Array(data);
         var length = ibytes.length;
         var len;
         var ioffset = 0;
@@ -61,7 +102,6 @@
         }
         return result;
     };
-
     zlib.compress = function (data) {
         var cm = 8;
         var cinfo = 7;
@@ -72,7 +112,7 @@
         var fcheck = 31 - (cmf * 256 + flg) % 31;
         flg |= fcheck;
         var compressed = zlib.deflate(data);
-        var checksum = jz.algorithms.adler32(data);
+        var checksum = zlib.adler32(data);
         var iview = new Uint8Array(compressed);
         var result = new ArrayBuffer(2 + iview.length + 4);
         var resultView = new DataView(result);
@@ -237,24 +277,38 @@
         var context = canvas.getContext('2d');
         var width = canvas.width;
         var height = canvas.height;
-        var pixels = context.getImageData(0, 0, width, height).data;
-        var rgb = new Uint8Array(width * 3 * height);
-        for (var i = 0, o = 0, len = pixels.length; i < len; i += 4, o += 3) {
-            rgb[o + 0] = pixels[i + 0];
-            rgb[o + 1] = pixels[i + 1];
-            rgb[o + 2] = pixels[i + 2];
-        }
-        var bpp = 3;
-        var ilinelength = 3 * width;
-        var olinelength = 1 + width * 3;
+        var rgba = context.getImageData(0, 0, width, height).data;
+        var hasAlpha = (function () {
+            for (var i = 3; i < rgba.length; i += 4) {
+                if (rgba[i] === 0) {
+                    return true;
+                }
+            }
+            return false;
+        }());
+        var pixels = (function () {
+            if (hasAlpha) {
+                return new Uint8Array(rgba);
+            }
+            var rgb = new Uint8Array(3 * width * height);
+            for (var i = 0, o = 0, len = rgba.length; i < len; i += 4, o += 3) {
+                rgb[o + 0] = rgba[i + 0];
+                rgb[o + 1] = rgba[i + 1];
+                rgb[o + 2] = rgba[i + 2];
+            }
+            return rgb;
+        }());
+        var bpp = hasAlpha? 4: 3;
+        var ilinelength = hasAlpha? 4 * width: 3 * width;
+        var olinelength = hasAlpha? 1 + width * 4: 1 + width * 3;
         var raw = new Uint8Array(height * olinelength);
         var prevline;
         var curline;
         var result;
         var filters = [PNG.FILTER_SUB, PNG.FILTER_UP, PNG.FILTER_AVERAGE];
         for (var y = 0; y < height; ++y) {
-            prevline = (y === 0)? null: rgb.subarray((y - 1) * ilinelength, y * ilinelength);
-            curline = rgb.subarray(y * ilinelength, (y + 1) * ilinelength);
+            prevline = (y === 0)? null: pixels.subarray((y - 1) * ilinelength, y * ilinelength);
+            curline = pixels.subarray(y * ilinelength, (y + 1) * ilinelength);
             result = PNG.chooseFilter(curline, prevline, bpp, filters);
             raw[y * olinelength] = result.filter;
             raw.set(result.line, y * olinelength + 1);
@@ -264,7 +318,7 @@
                 width: width,
                 height: height,
                 bitdepth: 8,
-                colortype: 2,
+                colortype: hasAlpha? 6: 2,
                 compression: 0,
                 filter: 0,
                 iterlace: 0
@@ -487,11 +541,11 @@
     };
     PNGWriter.prototype._writeChecksum = function (data, type) {
         var slice = Array.prototype.slice;
-        var t = slice.call(type).map(function (s) { return s.charCodeAt(0); });
-        var start = crc32(t);
+        var t = new Uint8Array(slice.call(type).map(function (s) { return s.charCodeAt(0); }));
+        var start = zlib.crc32(t);
         var arraybuf = new ArrayBuffer(4);
         var dataview = new DataView(arraybuf);
-        var checksum = crc32(new Uint8Array(data), start);
+        var checksum = zlib.crc32(new Uint8Array(data), start);
         dataview.setInt32(0, checksum, false);
         this._bb.append(arraybuf);
     };
@@ -529,5 +583,6 @@
         this._writeChecksum(compressed, 'IDAT');
     };
 
+    global.zlib = zlib;
     global.PNG = PNG;
 }(Function('return this;')()));
