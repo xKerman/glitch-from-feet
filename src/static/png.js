@@ -280,7 +280,7 @@
         var rgba = context.getImageData(0, 0, width, height).data;
         var hasAlpha = (function () {
             for (var i = 3; i < rgba.length; i += 4) {
-                if (rgba[i] !== 255) {
+                if (rgba[i] === 0) {
                     return true;
                 }
             }
