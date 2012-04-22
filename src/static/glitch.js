@@ -104,6 +104,7 @@
     };
 
     var glitch = function (png) {
+        glitching = true;
         var interval = (function () {
             var start = Date.now();
             png.write();
@@ -113,6 +114,7 @@
         var glitchHeight = Math.max(Math.ceil(png.height * (interval / 10000)), 5);
         var start = png.height - 1;
         var end = Math.max(start - glitchHeight, 0);
+        var img = document.getElementById('target');
         var cid = setInterval(function () {
             if (start < 0) {
                 clearInterval(cid);
@@ -120,6 +122,7 @@
                 downloadButton.style.opacity = 1;
                 downloadButton.disabled = false;
                 downloadFile = png.write();
+                glitching = false;
                 return;
             }
             for (var i = start; i >= end; --i) {
@@ -127,7 +130,6 @@
             }
             var blob = png.write();
             var url = URL.createObjectURL(blob);
-            var img = document.getElementById('target');
             img.src = url;
             start = end - 1;
             end = Math.max(start - glitchHeight, 0);
@@ -164,10 +166,14 @@
     var dropCircle = document.getElementById('canvas-container');
     var targetFile;
     var downloadFile;
+    var glitching = false;
     dropCircle.addEventListener('dragenter', stopEvent, false);
     dropCircle.addEventListener('dragover', stopEvent, false);
     dropCircle.addEventListener('drop', function (e) {
         stopEvent(e);
+        if (glitching) {
+            return;
+        }
         var dt = e.dataTransfer;
         if (dt.files.length != 1) {
             return;
