@@ -277,24 +277,38 @@
         var context = canvas.getContext('2d');
         var width = canvas.width;
         var height = canvas.height;
-        var pixels = context.getImageData(0, 0, width, height).data;
-        var rgb = new Uint8Array(width * 3 * height);
-        for (var i = 0, o = 0, len = pixels.length; i < len; i += 4, o += 3) {
-            rgb[o + 0] = pixels[i + 0];
-            rgb[o + 1] = pixels[i + 1];
-            rgb[o + 2] = pixels[i + 2];
-        }
-        var bpp = 3;
-        var ilinelength = 3 * width;
-        var olinelength = 1 + width * 3;
+        var rgba = context.getImageData(0, 0, width, height).data;
+        var hasAlpha = (function () {
+            for (var i = 3; i < rgba.length; i += 4) {
+                if (rgba[i] !== 255) {
+                    return true;
+                }
+            }
+            return false;
+        }());
+        var pixels = (function () {
+            if (hasAlpha) {
+                return new Uint8Array(rgba);
+            }
+            var rgb = new Uint8Array(3 * width * height);
+            for (var i = 0, o = 0, len = rgba.length; i < len; i += 4, o += 3) {
+                rgb[o + 0] = rgba[i + 0];
+                rgb[o + 1] = rgba[i + 1];
+                rgb[o + 2] = rgba[i + 2];
+            }
+            return rgb;
+        }());
+        var bpp = hasAlpha? 4: 3;
+        var ilinelength = hasAlpha? 4 * width: 3 * width;
+        var olinelength = hasAlpha? 1 + width * 4: 1 + width * 3;
         var raw = new Uint8Array(height * olinelength);
         var prevline;
         var curline;
         var result;
         var filters = [PNG.FILTER_SUB, PNG.FILTER_UP, PNG.FILTER_AVERAGE];
         for (var y = 0; y < height; ++y) {
-            prevline = (y === 0)? null: rgb.subarray((y - 1) * ilinelength, y * ilinelength);
-            curline = rgb.subarray(y * ilinelength, (y + 1) * ilinelength);
+            prevline = (y === 0)? null: pixels.subarray((y - 1) * ilinelength, y * ilinelength);
+            curline = pixels.subarray(y * ilinelength, (y + 1) * ilinelength);
             result = PNG.chooseFilter(curline, prevline, bpp, filters);
             raw[y * olinelength] = result.filter;
             raw.set(result.line, y * olinelength + 1);
@@ -304,7 +318,7 @@
                 width: width,
                 height: height,
                 bitdepth: 8,
-                colortype: 2,
+                colortype: hasAlpha? 6: 2,
                 compression: 0,
                 filter: 0,
                 iterlace: 0
