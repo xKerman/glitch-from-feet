@@ -104,11 +104,17 @@
     };
 
     var glitch = function (png) {
-        var glitchHeight = Math.max(Math.ceil(png.height * 0.01), 5);
+        var interval = (function () {
+            var start = Date.now();
+            png.write();
+            var end = Date.now();
+            return Math.max((end - start) * 2, 100);
+        }());
+        var glitchHeight = Math.max(Math.ceil(png.height * (interval / 10000)), 5);
         var start = png.height - 1;
         var end = Math.max(start - glitchHeight, 0);
         var cid = setInterval(function () {
-            if (start <= 0) {
+            if (start < 0) {
                 clearInterval(cid);
                 var downloadButton = document.getElementById('download-button');
                 downloadButton.style.opacity = 1;
@@ -123,9 +129,9 @@
             var url = URL.createObjectURL(blob);
             var img = document.getElementById('target');
             img.src = url;
-            start = end;
+            start = end - 1;
             end = Math.max(start - glitchHeight, 0);
-        }, 100);
+        }, interval);
     };
 
     var showImage = function (file) {
