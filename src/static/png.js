@@ -31,9 +31,9 @@
 
         return function (array, start) {
             var result = start || 0;
-            var buffer = array.buffer || array;
+            var buffer = new Uint8Array(array).buffer;
             var byteLength = buffer.byteLength;
-            var bytes = (array instanceof Uint32Array)? array: new Uint32Array(buffer, 0, Math.floor(byteLength / 4));
+            var bytes = new Uint32Array(buffer, 0, Math.floor(byteLength / 4));
             var t = table;
             var i = 0;
             var len = bytes.length;
@@ -55,10 +55,10 @@
             return ~result;
         };
     }());
-    zlib.adler32 = function (data) {
+    zlib.adler32 = function (data, start) {
         var bytes = (data instanceof Uint8Array)? data: new Uint8Array(data);
-        var a = 1;
-        var b = 0;
+        var a = (typeof start === 'undefined')? 1: (start & 0xFFFF);
+        var b = (typeof start === 'undefined')? 0: ((start >>> 16) & 0xFFFF);
         var base = 65521;
         var len = bytes.length;
         var tlen = 5550;
@@ -90,7 +90,7 @@
         var resultView8 = new Uint8Array(result);
         while (ioffset < length) {
             len = Math.min(0xFFFF, length);
-            bfinal = (length === 0)? 1: 0;
+            bfinal = (ioffset + len < length)? 0: 1;
             header = (btype << 2) | bfinal;
             resultView8[ooffset] = header;
             resultView.setInt16(ooffset+1, len, true);
@@ -414,7 +414,7 @@
         return true;
     };
     PNGParser.prototype._parseChunkLength = function (dataview) {
-        var length = dataview.getInt32(this._offset, false);
+        var length = dataview.getUint32(this._offset, false);
         this._offset += 4;
         if (length < 0 || length > PNG.MAX_CHUNK_LEN) {
             throw new Error('chunk length is not valid');
@@ -434,9 +434,9 @@
             throw new Error('chunk type is not IHDR, ' + type);
         }
         var header = {};
-        header.width = dataview.getInt32(this._offset, false);
+        header.width = dataview.getUint32(this._offset, false);
         this._offset += 4;
-        header.height = dataview.getInt32(this._offset, false);
+        header.height = dataview.getUint32(this._offset, false);
         this._offset += 4;
         var remainder = new Uint8Array(dataview.buffer, this._offset, 5);
         this._offset += 5;

@@ -45,9 +45,15 @@
             equal(zlib.crc32(data), crc32Simple(data), 'length = ' + length);
         }
     });
+    test('crc32 subarray', function () {
+        var buffer = new ArrayBuffer(11);
+        var bytes = new Uint8Array(buffer);
+        bytes.set([97, 104, 101, 108, 108, 111, 97, 97, 97, 97, 97]);
+        equal(zlib.crc32(bytes.subarray(1, 6)), 907060870);
+    });
     test('adler32', function () {
-        equal(1, zlib.adler32(new Uint8Array(0)));
-        equal(103547413, zlib.adler32(new Uint8Array([104, 101, 108, 108, 111])));
+        equal(zlib.adler32(new Uint8Array(0)), 1);
+        equal(zlib.adler32(new Uint8Array([104, 101, 108, 108, 111])), 103547413);
     });
     test('adler32 random', function () {
         var adler32Simple = function (data) {
@@ -69,8 +75,49 @@
             for (j = 0; j < length; ++j) {
                 data[j] = j;
             }
-            equal(adler32Simple(data), zlib.adler32(data), 'length = ' + length);
+            equal(zlib.adler32(data), adler32Simple(data), 'length = ' + length);
         }
+    });
+    test('adler32 subarray', function () {
+        var buffer = new ArrayBuffer(11);
+        var bytes = new Uint8Array(buffer);
+        bytes.set([97, 104, 101, 108, 108, 111, 97, 97, 97, 97, 97]);
+        equal(zlib.adler32(bytes.subarray(1, 6)), 103547413);
+    });
+    test('compress', function () {
+        var data = new Uint8Array([104, 101, 108, 108, 111]);
+        var result = zlib.compress(data, 0);
+        var resultView = new Uint8Array(result);
+        ok(result instanceof ArrayBuffer);
+        equal(result.byteLength, 16);
+        equal(resultView[0], 120);
+        equal(resultView[1], 1);
+        equal(resultView[2], 1);
+        equal(resultView[3], 5);
+        equal(resultView[4], 0);
+        equal(resultView[5], 250);
+        equal(resultView[6], 255);
+        equal(resultView[7], 104);
+        equal(resultView[8], 101);
+        equal(resultView[9], 108);
+        equal(resultView[10], 108);
+        equal(resultView[11], 111);
+        equal(resultView[12], 6);
+        equal(resultView[13], 44);
+        equal(resultView[14], 2);
+        equal(resultView[15], 21);
+    });
+    test('decompress', function () {
+        var data = new Uint8Array([120, 1, 1, 5, 0, 250, 255, 104, 101, 108, 108, 111, 6, 44, 2, 21]);
+        var result = zlib.decompress(data);
+        var resultView = new Uint8Array(result);
+        ok(result instanceof ArrayBuffer);
+        equal(result.byteLength, 5);
+        equal(resultView[0], 104);
+        equal(resultView[1], 101);
+        equal(resultView[2], 108);
+        equal(resultView[3], 108);
+        equal(resultView[4], 111);
     });
 
     module('PNG');
