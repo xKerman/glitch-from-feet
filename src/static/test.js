@@ -271,4 +271,38 @@
         req.responseType = 'blob';
         req.send(null);
     });
+    asyncTest('bps', function () {
+        var req = new XMLHttpRequest();
+        req.addEventListener('load', function (e) {
+            var png = new PNG(e.target.response);
+            equal(png.bps(), 3);
+            start();
+        });
+        req.open('GET', '/static/lena.png');
+        req.responseType = 'arraybuffer';
+        req.send(null);
+    });
+    asyncTest('getline', function () {
+        var req = new XMLHttpRequest();
+        req.addEventListener('load', function (e) {
+            var png = new PNG(e.target.response);
+            var line;
+            var filter;
+            for (var i = 0; i < png.height; ++i) {
+                line = png.getline(i);
+                filter = line[0];
+                ok(line instanceof Uint8Array);
+                notEqual([PNG.FILTER_NONE,
+                          PNG.FILTER_SUB,
+                          PNG.FILTER_UP,
+                          PNG.FILTER_AVERAGE,
+                          PNG.FILTER_PAETH].indexOf(filter), -1);
+                equal(line.length, 512 * 3 + 1);
+            }
+            start();
+        });
+        req.open('GET', '/static/lena.png');
+        req.responseType = 'arraybuffer';
+        req.send(null);
+    });
 }());
