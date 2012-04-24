@@ -137,12 +137,8 @@
         var compressed = zlib.compress(data, 0);
         var result = zlib.decompress(new Uint8Array(compressed));
         var resultView = new Uint8Array(result);
-        var allEqual = true;
         equal(result.byteLength, data.length);
-        for (i = 0; i < result.byteLength; ++i) {
-            allEqual = resultView[i] === data[i] && allEqual;
-        }
-        ok(allEqual);
+        deepEqual(resultView, data);
     });
 
     module('PNG');
@@ -151,6 +147,7 @@
         req.addEventListener('load', function (e) {
             var buffer = e.target.response;
             var png = new PNG(buffer);
+            ok(png instanceof PNG);
             equal(png.width, 512);
             equal(png.height, 512);
             equal(png.header.width, 512);
@@ -189,10 +186,6 @@
                 equal(result.header.filter, png.header.filter);
                 equal(result.header.interlace, png.header.interlace);
                 equal(result.raw.length, png.raw.length);
-                for (var i = 0;  i < 100; ++i) {
-                    index = Math.floor(Math.random() * result.raw.length + 1);
-                    equal(result.raw[index], png.raw[index], 'index = ' + index);
-                }
                 start();
             };
             reader.readAsArrayBuffer(blob);
@@ -200,5 +193,49 @@
         req.open('GET', '/static/lena.png');
         req.responseType = 'arraybuffer';
         req.send(null);
+    });
+    test('none filter', function () {
+        var currentline = new Uint8Array([0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11]);
+        var prevline = new Uint8Array(12);
+        var bpp = 3;
+        var result = PNG.noneFilter(currentline, prevline, bpp);
+        ok(result instanceof Uint8Array);
+        deepEqual(result, currentline);
+    });
+    test('sub filter', function () {
+        var currentline = new Uint8Array([0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11]);
+        var prevline = new Uint8Array(12);
+        var bpp = 3;
+        var result = PNG.subFilter(currentline, prevline, bpp);
+        var answer = new Uint8Array([0, 1, 2, 3, 3, 3, 3, 3, 3, 3, 3, 3]);
+        ok(result instanceof Uint8Array);
+        deepEqual(result, answer);
+    });
+    test('up filter', function () {
+        var currentline = new Uint8Array([10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21]);
+        var prevline = new Uint8Array([0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11]);
+        var bpp = 3;
+        var result = PNG.upFilter(currentline, prevline, 3);
+        var answer = new Uint8Array([10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10]);
+        ok(result instanceof Uint8Array);
+        deepEqual(result, answer);
+    });
+    test('average filter', function () {
+        var currentline = new Uint8Array([0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11]);
+        var prevline = new Uint8Array([0, 0, 1, 2, 3, 4, 5 ,6 ,7, 8, 9, 10]);
+        var bpp = 3;
+        var result = PNG.averageFilter(currentline, prevline, 3);
+        var answer = new Uint8Array([0, 1, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2]);
+        ok(result instanceof Uint8Array);
+        deepEqual(result, answer);
+    });
+    test('paeth filter', function () {
+        var currentline = new Uint8Array([0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11]);
+        var prevline = new Uint8Array([0, 0, 1, 2, 3, 4, 5 ,6 ,7, 8, 9, 10]);
+        var bpp = 3;
+        var result = PNG.paethFilter(currentline, prevline, 3);
+        var answer = new Uint8Array([0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1]);
+        ok(result instanceof Uint8Array);
+        deepEqual(result, answer);
     });
 }());

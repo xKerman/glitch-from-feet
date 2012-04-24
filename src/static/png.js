@@ -305,14 +305,12 @@
                 iterlace: 0
             },
             chunks: [
-                {type: 'IDAT', data: zlib.compress(raw)},
+                {type: 'IDAT', data: new Uint8Array(zlib.compress(raw))},
                 {type: 'IEND', data: new Uint8Array(0)}
             ],
             raw: raw,
             width: width,
-            height: height,
-            _parser: new PNGParser(),
-            _writer: new PNGWriter()
+            height: height
         };
         for (var prop in PNG.prototype) {
             png[prop] = PNG.prototype[prop];
