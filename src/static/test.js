@@ -119,6 +119,31 @@
         equal(resultView[3], 108);
         equal(resultView[4], 111);
     });
+    test('compress -> decompress', function () {
+        var data = new Uint8Array([104, 101, 108, 108, 111]);
+        var result = zlib.decompress(zlib.compress(data));
+        var resultView = new Uint8Array(result);
+        ok(result instanceof ArrayBuffer);
+        equal(resultView.length, data.length);
+        for (var i = 0; i < resultView.length; ++i) {
+            equal(resultView[i], data[i]);
+        }
+    });
+    test('compress -> decompress 0xFFFF + 1', function () {
+        var data = new Uint8Array(0xFFFF + 1);
+        for (var i = 0; i < data.length; ++i) {
+            data[i] = 255;
+        }
+        var compressed = zlib.compress(data, 0);
+        var result = zlib.decompress(new Uint8Array(compressed));
+        var resultView = new Uint8Array(result);
+        var allEqual = true;
+        equal(result.byteLength, data.length);
+        for (i = 0; i < result.byteLength; ++i) {
+            allEqual = resultView[i] === data[i] && allEqual;
+        }
+        ok(allEqual);
+    });
 
     module('PNG');
 }());

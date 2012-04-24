@@ -70,7 +70,7 @@
         var resultView = new DataView(result);
         var resultView8 = new Uint8Array(result);
         while (ioffset < length) {
-            len = Math.min(0xFFFF, length);
+            len = Math.min(0xFFFF, length - ioffset);
             bfinal = (ioffset + len < length)? 0: 1;
             header = (btype << 2) | bfinal;
             resultView8[ooffset] = header;
@@ -103,14 +103,14 @@
         resultView.setInt32(2+iview.length, checksum, false);
         return result;
     };
+    zlib.decompress = jz.zlib.decompress;
 
     var PNG = function (buf) {
         if (!(this instanceof PNG)) {
             return new PNG(buf);
         }
-        this._parser = new PNGParser();
-        this._writer = new PNGWriter();
-        var result = this._parser.parse(buf);
+        var parser = new PNGParser();
+        var result = parser.parse(buf);
         this.header = result.header;
         this.chunks = result.chunks;
         this.raw = result.raw;
