@@ -294,27 +294,23 @@
             raw[y * olinelength] = result.filter;
             raw.set(result.line, y * olinelength + 1);
         }
-        var png = {
-            header: {
-                width: width,
-                height: height,
-                bitdepth: 8,
-                colortype: hasAlpha? 6: 2,
-                compression: 0,
-                filter: 0,
-                iterlace: 0
-            },
-            chunks: [
-                {type: 'IDAT', data: new Uint8Array(zlib.compress(raw))},
-                {type: 'IEND', data: new Uint8Array(0)}
-            ],
-            raw: raw,
+        var png = Object.create(PNG.prototype);
+        png.header = {
             width: width,
-            height: height
-        };
-        for (var prop in PNG.prototype) {
-            png[prop] = PNG.prototype[prop];
-        }
+            height: height,
+            bitdepth: 8,
+            colortype: hasAlpha? 6: 2,
+            compression: 0,
+            filter: 0,
+            interlace: 0
+        },
+        png.chunks = [
+            {type: 'IDAT', data: new Uint8Array(zlib.compress(raw))},
+            {type: 'IEND', data: new Uint8Array(0)}
+        ];
+        png.raw = raw;
+        png.width = width;
+        png.height = height;
         return png;
     };
     PNG.prototype.bps = function () { // byte per sample

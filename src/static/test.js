@@ -238,4 +238,37 @@
         ok(result instanceof Uint8Array);
         deepEqual(result, answer);
     });
+    asyncTest('fromCanvas', function () {
+        var req = new XMLHttpRequest();
+        req.addEventListener('load', function (e) {
+            var URL = window.URL || window.webkitURL;
+            var url = URL.createObjectURL(e.target.response);
+            var img = document.createElement('img');
+            img.src = url;
+            img.addEventListener('load', function () {
+                var canvas = document.createElement('canvas');
+                canvas.width = img.width;
+                canvas.height = img.height;
+                var context = canvas.getContext('2d');
+                context.drawImage(img, 0, 0);
+                var png = PNG.fromCanvas(canvas);
+                ok(png instanceof PNG);
+                equal(png.width, 512);
+                equal(png.height, 512);
+                equal(png.header.width, 512);
+                equal(png.header.height, 512);
+                equal(png.header.bitdepth, 8);
+                equal(png.header.colortype, 2);
+                equal(png.header.compression, 0);
+                equal(png.header.filter, 0);
+                equal(png.header.interlace, 0);
+                equal(png.raw.length, 512 * (512 * 3 + 1));
+                ok(png.write instanceof Function);
+                start();
+            }, false);
+        }, false);
+        req.open('GET', '/static/lena.png');
+        req.responseType = 'blob';
+        req.send(null);
+    });
 }());
