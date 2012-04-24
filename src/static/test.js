@@ -146,4 +146,59 @@
     });
 
     module('PNG');
+    asyncTest('parse', function () {
+        var req = new XMLHttpRequest();
+        req.addEventListener('load', function (e) {
+            var buffer = e.target.response;
+            var png = new PNG(buffer);
+            equal(png.width, 512);
+            equal(png.height, 512);
+            equal(png.header.width, 512);
+            equal(png.header.height, 512);
+            equal(png.header.bitdepth, 8);
+            equal(png.header.colortype, 2);
+            equal(png.header.compression, 0);
+            equal(png.header.filter, 0);
+            equal(png.header.interlace, 0);
+            equal(png.raw.length, 512 * (512 * 3 + 1));
+            start();
+        }, false);
+        req.open('GET', '/static/lena.png');
+        req.responseType = 'arraybuffer';
+        req.send(null);
+    });
+    asyncTest('write', function () {
+        var req = new XMLHttpRequest();
+        req.addEventListener('load', function (e) {
+            var buffer = e.target.response;
+            var png = new PNG(buffer);
+            var blob = png.write();
+            var reader = new FileReader();
+            reader.onload = function (e) {
+                var buffer = e.target.result;
+                var result = new PNG(buffer);
+                var index = 0;
+                ok(blob instanceof Blob);
+                equal(result.width, png.width);
+                equal(result.height, png.height);
+                equal(result.header.width, png.header.width);
+                equal(result.header.height, png.header.height);
+                equal(result.header.bitdepth, png.header.bitdepth);
+                equal(result.header.colortype, png.header.colortype);
+                equal(result.header.compression, png.header.compression);
+                equal(result.header.filter, png.header.filter);
+                equal(result.header.interlace, png.header.interlace);
+                equal(result.raw.length, png.raw.length);
+                for (var i = 0;  i < 100; ++i) {
+                    index = Math.floor(Math.random() * result.raw.length + 1);
+                    equal(result.raw[index], png.raw[index], 'index = ' + index);
+                }
+                start();
+            };
+            reader.readAsArrayBuffer(blob);
+        }, false);
+        req.open('GET', '/static/lena.png');
+        req.responseType = 'arraybuffer';
+        req.send(null);
+    });
 }());

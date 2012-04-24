@@ -348,7 +348,8 @@
         return this.raw.subarray(begin, end);
     };
     PNG.prototype.write = function () {
-        return this._writer.write(this);
+        var writer = new PNGWriter();
+        return writer.write(this);
     };
 
     var PNGParser = function () {
@@ -471,7 +472,8 @@
     };
     PNGParser.prototype._deflateIDAT = function (chunks) {
         var idat = chunks[this._findFirstIDAT(chunks)];
-        return new Uint8Array(zlib.decompress(idat.data));
+        var result = new Uint8Array(zlib.decompress(idat.data));
+        return result;
     };
 
     var PNGWriter = function () {
