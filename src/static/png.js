@@ -55,26 +55,7 @@
             return ~result;
         };
     }());
-    zlib.adler32 = function (data, start) {
-        var bytes = (data instanceof Uint8Array)? data: new Uint8Array(data);
-        var a = (typeof start === 'undefined')? 1: (start & 0xFFFF);
-        var b = (typeof start === 'undefined')? 0: ((start >>> 16) & 0xFFFF);
-        var base = 65521;
-        var len = bytes.length;
-        var tlen = 5550;
-        var i = 0;
-        while (len) {
-            tlen = Math.min(5550, len);
-            len -= tlen;
-            do {
-                a += bytes[i++];
-                b += a;
-            } while (--tlen);
-            a %= base;
-            b %= base;
-        }
-        return ((b << 16) | a) >>> 0;
-    };
+    zlib.adler32 = jz.algorithms.adler32;
     zlib.deflate = function (data) {
         var ibytes = (data instanceof Uint8Array)? data: new Uint8Array(data);
         var length = ibytes.length;
@@ -102,7 +83,7 @@
         }
         return result;
     };
-    zlib.compress = function (data) {
+    zlib.compress = function (data, level) {
         var cm = 8;
         var cinfo = 7;
         var cmf = (cinfo << 4) | cm;
@@ -575,7 +556,7 @@
         this._writeChecksum(arraybuf, chunk.type);
     };
     PNGWriter.prototype._writeIDATChunk = function (raw) {
-        var compressed = zlib.compress(raw);
+        var compressed = zlib.compress(raw, 0);
         var length = compressed.byteLength;
         this._writeLength(length);
         this._writeType('IDAT');

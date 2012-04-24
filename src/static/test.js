@@ -84,7 +84,7 @@
         bytes.set([97, 104, 101, 108, 108, 111, 97, 97, 97, 97, 97]);
         equal(zlib.adler32(bytes.subarray(1, 6)), 103547413);
     });
-    test('compress', function () {
+    test('compress - no compression', function () {
         var data = new Uint8Array([104, 101, 108, 108, 111]);
         var result = zlib.compress(data, 0);
         var resultView = new Uint8Array(result);
