@@ -171,15 +171,39 @@
         insertPoint.appendChild(img);
     };
 
+    var showDroppable = function () {
+        var dropCircle = document.getElementById('canvas-container');
+        var style = dropCircle.style;
+        style.backgroundColor = 'rgb(200, 200, 200)';
+        style.border = '5px dotted gray';
+    };
+
+    var resetDropCircle = function () {
+        var dropCircle = document.getElementById('canvas-container');
+        var style = dropCircle.style;
+        style.backgroundColor = 'white';
+        style.border = '5px solid gray';
+    };
 
     var dropCircle = document.getElementById('canvas-container');
     var targetFile;
     var downloadFile;
     var glitching = false;
-    dropCircle.addEventListener('dragenter', stopEvent, false);
-    dropCircle.addEventListener('dragover', stopEvent, false);
+    dropCircle.addEventListener('dragenter', function (e) {
+        stopEvent(e);
+        showDroppable();
+    }, false);
+    dropCircle.addEventListener('dragover', function (e) {
+        stopEvent(e);
+        showDroppable();
+    }, false);
+    dropCircle.addEventListener('dragleave', function (e) {
+        stopEvent(e);
+        resetDropCircle();
+    });
     dropCircle.addEventListener('drop', function (e) {
         stopEvent(e);
+        resetDropCircle();
         if (glitching) {
             return;
         }
