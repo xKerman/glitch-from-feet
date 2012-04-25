@@ -31,9 +31,9 @@
 
         return function (array, start) {
             var result = start || 0;
-            var buffer = array.buffer || array;
+            var buffer = new Uint8Array(array).buffer;
             var byteLength = buffer.byteLength;
-            var bytes = (array instanceof Uint32Array)? array: new Uint32Array(buffer, 0, Math.floor(byteLength / 4));
+            var bytes = new Uint32Array(buffer, 0, Math.floor(byteLength / 4));
             var t = table;
             var i = 0;
             var len = bytes.length;
@@ -55,26 +55,7 @@
             return ~result;
         };
     }());
-    zlib.adler32 = function (data) {
-        var bytes = (data instanceof Uint8Array)? data: new Uint8Array(data);
-        var a = 1;
-        var b = 0;
-        var base = 65521;
-        var len = bytes.length;
-        var tlen = 5550;
-        var i = 0;
-        while (len) {
-            tlen = Math.min(5550, len);
-            len -= tlen;
-            do {
-                a += bytes[i++];
-                b += a;
-            } while (--tlen);
-            a %= base;
-            b %= base;
-        }
-        return ((b << 16) | a) >>> 0;
-    };
+    zlib.adler32 = jz.algorithms.adler32;
     zlib.deflate = function (data) {
         var ibytes = (data instanceof Uint8Array)? data: new Uint8Array(data);
         var length = ibytes.length;
@@ -89,8 +70,8 @@
         var resultView = new DataView(result);
         var resultView8 = new Uint8Array(result);
         while (ioffset < length) {
-            len = Math.min(0xFFFF, length);
-            bfinal = (length === 0)? 1: 0;
+            len = Math.min(0xFFFF, length - ioffset);
+            bfinal = (ioffset + len < length)? 0: 1;
             header = (btype << 2) | bfinal;
             resultView8[ooffset] = header;
             resultView.setInt16(ooffset+1, len, true);
@@ -102,7 +83,10 @@
         }
         return result;
     };
-    zlib.compress = function (data) {
+    zlib.compress = function (data, level) {
+        if (level > 0) {
+            return jz.zlib.compress(data, level);
+        }
         var cm = 8;
         var cinfo = 7;
         var cmf = (cinfo << 4) | cm;
@@ -122,14 +106,14 @@
         resultView.setInt32(2+iview.length, checksum, false);
         return result;
     };
+    zlib.decompress = jz.zlib.decompress;
 
     var PNG = function (buf) {
         if (!(this instanceof PNG)) {
             return new PNG(buf);
         }
-        this._parser = new PNGParser();
-        this._writer = new PNGWriter();
-        var result = this._parser.parse(buf);
+        var parser = new PNGParser();
+        var result = parser.parse(buf);
         this.header = result.header;
         this.chunks = result.chunks;
         this.raw = result.raw;
@@ -313,29 +297,23 @@
             raw[y * olinelength] = result.filter;
             raw.set(result.line, y * olinelength + 1);
         }
-        var png = {
-            header: {
-                width: width,
-                height: height,
-                bitdepth: 8,
-                colortype: hasAlpha? 6: 2,
-                compression: 0,
-                filter: 0,
-                iterlace: 0
-            },
-            chunks: [
-                {type: 'IDAT', data: zlib.compress(raw)},
-                {type: 'IEND', data: new Uint8Array(0)}
-            ],
-            raw: raw,
+        var png = Object.create(PNG.prototype);
+        png.header = {
             width: width,
             height: height,
-            _parser: new PNGParser(),
-            _writer: new PNGWriter()
-        };
-        for (var prop in PNG.prototype) {
-            png[prop] = PNG.prototype[prop];
-        }
+            bitdepth: 8,
+            colortype: hasAlpha? 6: 2,
+            compression: 0,
+            filter: 0,
+            interlace: 0
+        },
+        png.chunks = [
+            {type: 'IDAT', data: new Uint8Array(zlib.compress(raw))},
+            {type: 'IEND', data: new Uint8Array(0)}
+        ];
+        png.raw = raw;
+        png.width = width;
+        png.height = height;
         return png;
     };
     PNG.prototype.bps = function () { // byte per sample
@@ -366,8 +344,9 @@
         var end = (lineno + 1) * linelength;
         return this.raw.subarray(begin, end);
     };
-    PNG.prototype.write = function () {
-        return this._writer.write(this);
+    PNG.prototype.write = function (level) {
+        var writer = new PNGWriter();
+        return writer.write(this, level);
     };
 
     var PNGParser = function () {
@@ -414,7 +393,7 @@
         return true;
     };
     PNGParser.prototype._parseChunkLength = function (dataview) {
-        var length = dataview.getInt32(this._offset, false);
+        var length = dataview.getUint32(this._offset, false);
         this._offset += 4;
         if (length < 0 || length > PNG.MAX_CHUNK_LEN) {
             throw new Error('chunk length is not valid');
@@ -434,9 +413,9 @@
             throw new Error('chunk type is not IHDR, ' + type);
         }
         var header = {};
-        header.width = dataview.getInt32(this._offset, false);
+        header.width = dataview.getUint32(this._offset, false);
         this._offset += 4;
-        header.height = dataview.getInt32(this._offset, false);
+        header.height = dataview.getUint32(this._offset, false);
         this._offset += 4;
         var remainder = new Uint8Array(dataview.buffer, this._offset, 5);
         this._offset += 5;
@@ -490,7 +469,8 @@
     };
     PNGParser.prototype._deflateIDAT = function (chunks) {
         var idat = chunks[this._findFirstIDAT(chunks)];
-        return new Uint8Array(zlib.decompress(idat.data));
+        var result = new Uint8Array(zlib.decompress(idat.data));
+        return result;
     };
 
     var PNGWriter = function () {
@@ -499,14 +479,14 @@
         }
         this._bb = new BlobBuilder();
     };
-    PNGWriter.prototype.write = function (png) {
+    PNGWriter.prototype.write = function (png, level) {
         this._writeSignature();
         this._writeHeader(png.header);
         var that = this;
         png.chunks.forEach(function (chunk) {
             switch (chunk.type) {
             case 'IDAT':
-                that._writeIDATChunk(png.raw);
+                that._writeIDATChunk(png.raw, level);
                 break;
             default:
                 that._writeChunk(chunk);
@@ -574,8 +554,8 @@
         this._bb.append(arraybuf);
         this._writeChecksum(arraybuf, chunk.type);
     };
-    PNGWriter.prototype._writeIDATChunk = function (raw) {
-        var compressed = zlib.compress(raw);
+    PNGWriter.prototype._writeIDATChunk = function (raw, level) {
+        var compressed = zlib.compress(raw, level);
         var length = compressed.byteLength;
         this._writeLength(length);
         this._writeType('IDAT');

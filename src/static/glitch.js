@@ -107,7 +107,7 @@
         glitching = true;
         var interval = (function () {
             var start = Date.now();
-            png.write();
+            png.write(0);
             var end = Date.now();
             return Math.max((end - start) * 2, 100);
         }());
@@ -115,25 +115,34 @@
         var start = png.height - 1;
         var end = Math.max(start - glitchHeight, 0);
         var img = document.getElementById('target');
+        var progress = document.createElement('progress');
+        progress.max = 1.0;
+        progress.value = 0.0;
         var cid = setInterval(function () {
             if (start < 0) {
                 clearInterval(cid);
                 var downloadButton = document.getElementById('download-button');
-                downloadButton.style.opacity = 1;
-                downloadButton.disabled = false;
-                downloadFile = png.write();
-                glitching = false;
+                progress.value = 1.0;
+                setTimeout(function () {
+                    downloadButton.style.opacity = 1;
+                    downloadButton.disabled = false;
+                    downloadFile = png.write(9);
+                    glitching = false;
+                    document.getElementById('button-container').removeChild(progress);
+                }, 0);
                 return;
             }
             for (var i = start; i >= end; --i) {
                 png.getline(i)[0] = PNG.FILTER_PAETH;
             }
-            var blob = png.write();
+            var blob = png.write(0);
             var url = URL.createObjectURL(blob);
             img.src = url;
             start = end - 1;
             end = Math.max(start - glitchHeight, 0);
+            progress.value = (png.height - end) / png.height;
         }, interval);
+        document.getElementById('button-container').appendChild(progress);
     };
 
     var showImage = function (file) {
@@ -162,15 +171,39 @@
         insertPoint.appendChild(img);
     };
 
+    var showDroppable = function () {
+        var dropCircle = document.getElementById('canvas-container');
+        var style = dropCircle.style;
+        style.backgroundColor = 'rgb(200, 200, 200)';
+        style.border = '5px dotted gray';
+    };
+
+    var resetDropCircle = function () {
+        var dropCircle = document.getElementById('canvas-container');
+        var style = dropCircle.style;
+        style.backgroundColor = 'white';
+        style.border = '5px solid gray';
+    };
 
     var dropCircle = document.getElementById('canvas-container');
     var targetFile;
     var downloadFile;
     var glitching = false;
-    dropCircle.addEventListener('dragenter', stopEvent, false);
-    dropCircle.addEventListener('dragover', stopEvent, false);
+    dropCircle.addEventListener('dragenter', function (e) {
+        stopEvent(e);
+        showDroppable();
+    }, false);
+    dropCircle.addEventListener('dragover', function (e) {
+        stopEvent(e);
+        showDroppable();
+    }, false);
+    dropCircle.addEventListener('dragleave', function (e) {
+        stopEvent(e);
+        resetDropCircle();
+    });
     dropCircle.addEventListener('drop', function (e) {
         stopEvent(e);
+        resetDropCircle();
         if (glitching) {
             return;
         }
