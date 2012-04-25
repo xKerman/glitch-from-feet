@@ -241,8 +241,13 @@
     asyncTest('fromCanvas', function () {
         var req = new XMLHttpRequest();
         req.addEventListener('load', function (e) {
+            // Chrome 18 does not support reponseType = 'blob'
+            var BlobBuilder = window.BlobBuilder || window.MozBlobBuilder || window.WebKitBlobBuilder;
+            var bb = new BlobBuilder();
+            bb.append(e.target.response);
+            var blob = bb.getBlob();
             var URL = window.URL || window.webkitURL;
-            var url = URL.createObjectURL(e.target.response);
+            var url = URL.createObjectURL(blob);
             var img = document.createElement('img');
             img.src = url;
             img.addEventListener('load', function () {
@@ -268,7 +273,7 @@
             }, false);
         }, false);
         req.open('GET', '/static/lena.png');
-        req.responseType = 'blob';
+        req.responseType = 'arraybuffer';
         req.send(null);
     });
     asyncTest('bps', function () {
