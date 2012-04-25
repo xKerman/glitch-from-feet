@@ -169,7 +169,7 @@
         req.addEventListener('load', function (e) {
             var buffer = e.target.response;
             var png = new PNG(buffer);
-            var blob = png.write();
+            var blob = png.write(0);
             var reader = new FileReader();
             reader.onload = function (e) {
                 var buffer = e.target.result;

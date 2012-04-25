@@ -84,6 +84,9 @@
         return result;
     };
     zlib.compress = function (data, level) {
+        if (level > 0) {
+            return jz.zlib.compress(data, level);
+        }
         var cm = 8;
         var cinfo = 7;
         var cmf = (cinfo << 4) | cm;
@@ -341,9 +344,9 @@
         var end = (lineno + 1) * linelength;
         return this.raw.subarray(begin, end);
     };
-    PNG.prototype.write = function () {
+    PNG.prototype.write = function (level) {
         var writer = new PNGWriter();
-        return writer.write(this);
+        return writer.write(this, level);
     };
 
     var PNGParser = function () {
@@ -476,14 +479,14 @@
         }
         this._bb = new BlobBuilder();
     };
-    PNGWriter.prototype.write = function (png) {
+    PNGWriter.prototype.write = function (png, level) {
         this._writeSignature();
         this._writeHeader(png.header);
         var that = this;
         png.chunks.forEach(function (chunk) {
             switch (chunk.type) {
             case 'IDAT':
-                that._writeIDATChunk(png.raw);
+                that._writeIDATChunk(png.raw, level);
                 break;
             default:
                 that._writeChunk(chunk);
@@ -551,8 +554,8 @@
         this._bb.append(arraybuf);
         this._writeChecksum(arraybuf, chunk.type);
     };
-    PNGWriter.prototype._writeIDATChunk = function (raw) {
-        var compressed = zlib.compress(raw, 0);
+    PNGWriter.prototype._writeIDATChunk = function (raw, level) {
+        var compressed = zlib.compress(raw, level);
         var length = compressed.byteLength;
         this._writeLength(length);
         this._writeType('IDAT');
