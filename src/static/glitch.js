@@ -196,10 +196,16 @@
     var glitching = false;
     dropCircle.addEventListener('dragenter', function (e) {
         stopEvent(e);
+        if (glitching) {
+            return;
+        }
         showDroppable();
     }, false);
     dropCircle.addEventListener('dragover', function (e) {
         stopEvent(e);
+        if (glitching) {
+            return;
+        }
         showDroppable();
     }, false);
     dropCircle.addEventListener('dragleave', function (e) {
