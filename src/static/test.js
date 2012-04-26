@@ -164,17 +164,39 @@
         req.responseType = 'arraybuffer';
         req.send(null);
     });
-    asyncTest('write', function () {
+    asyncTest('writeAsArrayBuffer', function () {
         var req = new XMLHttpRequest();
         req.addEventListener('load', function (e) {
             var buffer = e.target.response;
             var png = new PNG(buffer);
-            var blob = png.write(0);
+            var arraybuffer = png.writeAsArrayBuffer(0);
+            var result = new PNG(arraybuffer);
+            ok(arraybuffer instanceof ArrayBuffer);
+            equal(result.width, png.width);
+            equal(result.height, png.height);
+            equal(result.header.width, png.header.width);
+            equal(result.header.height, png.header.height);
+            equal(result.header.bitdepth, png.header.bitdepth);
+            equal(result.header.colortype, png.header.colortype);
+            equal(result.header.compression, png.header.compression);
+            equal(result.header.filter, png.header.filter);
+            equal(result.header.interlace, png.header.interlace);
+            equal(result.raw.length, png.raw.length);
+            start();
+        }, false);
+        req.open('GET', '/static/lena.png');
+        req.responseType = 'arraybuffer';
+        req.send(null);
+    });
+    asyncTest('writeAsBlob', function () {
+        var req = new XMLHttpRequest();
+        req.addEventListener('load', function (e) {
+            var buffer = e.target.response;
+            var png = new PNG(buffer);
+            var blob = png.writeAsBlob(0);
             var reader = new FileReader();
             reader.onload = function (e) {
-                var buffer = e.target.result;
-                var result = new PNG(buffer);
-                var index = 0;
+                var result = new PNG(e.target.result);
                 ok(blob instanceof Blob);
                 equal(result.width, png.width);
                 equal(result.height, png.height);
@@ -194,6 +216,7 @@
         req.responseType = 'arraybuffer';
         req.send(null);
     });
+
     test('none filter', function () {
         var currentline = new Uint8Array([0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11]);
         var prevline = new Uint8Array(12);
@@ -268,7 +291,10 @@
                 equal(png.header.filter, 0);
                 equal(png.header.interlace, 0);
                 equal(png.raw.length, 512 * (512 * 3 + 1));
-                ok(png.write instanceof Function);
+                ok(png.bps instanceof Function);
+                ok(png.getline instanceof Function);
+                ok(png.writeAsArrayBuffer instanceof Function);
+                ok(png.writeAsBlob instanceof Function);
                 start();
             }, false);
         }, false);

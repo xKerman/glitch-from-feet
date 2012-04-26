@@ -344,9 +344,14 @@
         var end = (lineno + 1) * linelength;
         return this.raw.subarray(begin, end);
     };
-    PNG.prototype.write = function (level) {
+    PNG.prototype.writeAsArrayBuffer = function (level) {
         var writer = new PNGWriter();
         return writer.write(this, level);
+    };
+    PNG.prototype.writeAsBlob = function (level) {
+        var bb = new BlobBuilder();
+        bb.append(this.writeAsArrayBuffer(level));
+        return bb.getBlob();
     };
 
     var PNGParser = function () {
@@ -477,7 +482,7 @@
         if (!(this instanceof PNGWriter)) {
             return new PNGWriter();
         }
-        this._bb = new BlobBuilder();
+        this._bufs = [];
     };
     PNGWriter.prototype.write = function (png, level) {
         this._writeSignature();
@@ -493,41 +498,50 @@
                 break;
             }
         });
-        var result = this._bb.getBlob();
-        this._bb = new BlobBuilder();
+        var totalLength = 0;
+        for (var i = 0, len = this._bufs.length; i < len; ++i) {
+            totalLength += this._bufs[i].length;
+        }
+        var result = new ArrayBuffer(totalLength);
+        var resultView = new Uint8Array(result);
+        var offset = 0;
+        for (i = 0; i < len; ++i) {
+            resultView.set(this._bufs[i], offset);
+            offset += this._bufs[i].length;
+        }
         return result;
     };
     PNGWriter.prototype._writeSignature = function () {
-        var arraybuf = new ArrayBuffer(8);
-        var view = new Uint8Array(arraybuf);
-        view.set(PNG.SIGNATURE);
-        this._bb.append(arraybuf);
+        var buf = new Uint8Array(PNG.SIGNATURE.length);
+        buf.set(PNG.SIGNATURE);
+        this._bufs.push(buf);
     };
     PNGWriter.prototype._writeLength = function (length) {
         var arraybuf = new ArrayBuffer(4);
         var dataview = new DataView(arraybuf);
         dataview.setInt32(0, length, false);
-        this._bb.append(arraybuf);
+        this._bufs.push(new Uint8Array(arraybuf));
     };
     PNGWriter.prototype._writeType = function (type) {
-        var arraybuf = new ArrayBuffer(4);
-        var view = new Uint8Array(arraybuf);
+        var buf = new Uint8Array(4);
         var slice = Array.prototype.slice;
         var value = slice.call(type).map(function (s) {
             return s.charCodeAt(0);
         });
-        view.set(value);
-        this._bb.append(arraybuf);
+        buf.set(value);
+        this._bufs.push(buf);
     };
     PNGWriter.prototype._writeChecksum = function (data, type) {
         var slice = Array.prototype.slice;
-        var t = new Uint8Array(slice.call(type).map(function (s) { return s.charCodeAt(0); }));
+        var t = new Uint8Array(slice.call(type).map(function (s) {
+            return s.charCodeAt(0);
+        }));
         var start = zlib.crc32(t);
         var arraybuf = new ArrayBuffer(4);
         var dataview = new DataView(arraybuf);
         var checksum = zlib.crc32(new Uint8Array(data), start);
         dataview.setInt32(0, checksum, false);
-        this._bb.append(arraybuf);
+        this._bufs.push(new Uint8Array(arraybuf));
     };
     PNGWriter.prototype._writeHeader = function (header) {
         this._writeLength(13);
@@ -541,7 +555,7 @@
         dataview.setInt8(10, header.compression);
         dataview.setInt8(11, header.filter);
         dataview.setInt8(12, header.interlace);
-        this._bb.append(arraybuf);
+        this._bufs.push(new Uint8Array(arraybuf));
         this._writeChecksum(arraybuf, 'IHDR');
     };
     PNGWriter.prototype._writeChunk = function (chunk) {
@@ -551,7 +565,7 @@
         var arraybuf = new ArrayBuffer(length);
         var viewInt8 = new Uint8Array(arraybuf);
         viewInt8.set(chunk.data);
-        this._bb.append(arraybuf);
+        this._bufs.push(viewInt8);
         this._writeChecksum(arraybuf, chunk.type);
     };
     PNGWriter.prototype._writeIDATChunk = function (raw, level) {
@@ -559,7 +573,7 @@
         var length = compressed.byteLength;
         this._writeLength(length);
         this._writeType('IDAT');
-        this._bb.append(compressed);
+        this._bufs.push(new Uint8Array(compressed));
         this._writeChecksum(compressed, 'IDAT');
     };
 

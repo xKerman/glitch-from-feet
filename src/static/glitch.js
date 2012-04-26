@@ -4,6 +4,7 @@
     'use strict';
 
 
+    var BlobBuilder = window.BlobBuilder || window.MozBlobBuilder || window.WebKitBlobBuilder;
     var URL = window.URL || window.webkitURL;
     var requestAnimationFrame = window.requestAnimationFrame ||
             window.mozRequestAnimationFrame ||
@@ -107,7 +108,7 @@
         glitching = true;
         var interval = (function () {
             var start = Date.now();
-            png.write(0);
+            png.writeAsArrayBuffer(0);
             var end = Date.now();
             return Math.max((end - start) * 2, 100);
         }());
@@ -121,23 +122,27 @@
         var cid = setInterval(function () {
             if (start < 0) {
                 clearInterval(cid);
-                var downloadButton = document.getElementById('download-button');
-                progress.value = 1.0;
-                setTimeout(function () {
+                var worker = new Worker('/static/worker.js?' + Date.now());
+                worker.addEventListener('message', function (e) {
+                    var bb = new BlobBuilder();
+                    bb.append(e.data);
+                    downloadFile = bb.getBlob();
+                    var downloadButton = document.getElementById('download-button');
                     downloadButton.style.opacity = 1;
                     downloadButton.disabled = false;
-                    downloadFile = png.write(9);
                     glitching = false;
                     document.getElementById('button-container').removeChild(progress);
-                }, 0);
+                    progress.value = 1.0;
+                    worker.terminate();
+                }, false);
+                worker.postMessage({png: png, level: 9});
                 return;
             }
             for (var i = start; i >= end; --i) {
                 png.getline(i)[0] = PNG.FILTER_PAETH;
             }
-            var blob = png.write(0);
-            var url = URL.createObjectURL(blob);
-            img.src = url;
+            var blob = png.writeAsBlob();
+            img.src = URL.createObjectURL(blob);
             start = end - 1;
             end = Math.max(start - glitchHeight, 0);
             progress.value = (png.height - end) / png.height;
