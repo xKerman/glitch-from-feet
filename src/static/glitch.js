@@ -122,7 +122,7 @@
         var cid = setInterval(function () {
             if (start < 0) {
                 clearInterval(cid);
-                var worker = new Worker('/static/worker.js?' + Date.now());
+                var worker = new Worker('src/static/worker.js?' + Date.now());
                 worker.addEventListener('message', function (e) {
                     var bb = new BlobBuilder();
                     bb.append(e.data);
