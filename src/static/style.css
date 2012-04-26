@@ -21,6 +21,11 @@ body {
     width: 640px;
 }
 
+#canvas-container > img {
+    max-width: 500px;
+    max-height: 500px;
+}
+
 #glitch-button {
     opacity: 0;
 }

@@ -23,7 +23,12 @@
         range.detach();
     };
 
-    var loadImageAsPNG = function (file, callback) {
+    // maxWidth and maxHeight are optional parameters.
+    var loadImageAsPNG = function (file, maxWidth, maxHeight, callback) {
+        if (arguments.length === 2) {
+            maxWidth = maxHeight = null;
+            callback = arguments[1];
+        }
         if (!/^image\//.test(file.type)) {
             return;
         }
@@ -33,10 +38,23 @@
             var width = img.width;
             var height = img.height;
             var canvas = document.createElement('canvas');
-            canvas.width = width;
-            canvas.height = height;
+            if ((!maxWidth && !maxHeight) ||
+                (width <= maxWidth && height <= maxHeight)) {
+                canvas.width = width;
+                canvas.height = height;
+            }
+            else if (width > height) {
+                canvas.width = maxWidth;
+                canvas.height = Math.round(height * (maxWidth / width));
+            }
+            else {
+                canvas.height = maxHeight;
+                canvas.width = Math.round(width * (maxHeight / height));
+            }
+            console.log(canvas.width, canvas.height);
             var context = canvas.getContext('2d');
-            context.drawImage(img, 0, 0);
+            context.drawImage(img, 0, 0, width, height,
+                              0, 0, canvas.width, canvas.height);
             var png = PNG.fromCanvas(canvas);
             callback(png);
             URL.revokeObjectURL(img.src);
@@ -122,26 +140,18 @@
         var cid = setInterval(function () {
             if (start < 0) {
                 clearInterval(cid);
-                var worker = new Worker('/static/worker.js?' + Date.now());
-                worker.addEventListener('message', function (e) {
-                    var bb = new BlobBuilder();
-                    bb.append(e.data);
-                    downloadFile = bb.getBlob();
-                    var downloadButton = document.getElementById('download-button');
-                    downloadButton.style.opacity = 1;
-                    downloadButton.disabled = false;
-                    glitching = false;
-                    document.getElementById('button-container').removeChild(progress);
-                    progress.value = 1.0;
-                    worker.terminate();
-                }, false);
-                worker.postMessage({png: png, level: 9});
+                var downloadButton = document.getElementById('download-button');
+                downloadButton.style.opacity = 1;
+                downloadButton.disabled = false;
+                glitching = false;
+                document.getElementById('button-container').removeChild(progress);
+                progress.value = 1.0;
                 return;
             }
             for (var i = start; i >= end; --i) {
                 png.getline(i)[0] = PNG.FILTER_PAETH;
             }
-            var blob = png.writeAsBlob();
+            var blob = png.writeAsBlob(0);
             img.src = URL.createObjectURL(blob);
             start = end - 1;
             end = Math.max(start - glitchHeight, 0);
@@ -162,14 +172,6 @@
         img.src = URL.createObjectURL(file);
         img.id = 'target';
         img.addEventListener('load', function (e) {
-            var width = img.width;
-            var height = img.height;
-            if (width > height) {
-                img.width = Math.min(width, 500);
-            }
-            else {
-                img.height = Math.min(height, 500);
-            }
             URL.revokeObjectURL(img.src);
         }, false);
         var insertPoint = document.getElementById('canvas-container');
@@ -228,16 +230,37 @@
             return;
         }
         showImage(targetFile);
+        downloadFile = null;
     }, false);
     var glitchButton = document.getElementById('glitch-button');
     glitchButton.addEventListener('click', function (ev) {
         removeGlitchButton();
-        loadImageAsPNG(targetFile, glitch);
+        loadImageAsPNG(targetFile, 500, 500, glitch);
     }, false);
     var downloadButton = document.getElementById('download-button');
     downloadButton.addEventListener('click', function (ev) {
         var filename = 'glitched_' + targetFile.name;
         filename = filename.replace(/\.\w+$/, '.png');
-        download(downloadFile, filename);
+        downloadButton.disabled = true;
+        if (downloadFile) {
+            download(downloadFile, filename);
+            downloadButton.disabled = false;
+            return;
+        }
+        loadImageAsPNG(targetFile, function (png) {
+            for (var i = 0; i < png.height; ++i) {
+                png.getline(i)[0] = PNG.FILTER_PAETH;
+            }
+            var worker = new Worker('/static/worker.js');
+            worker.addEventListener('message', function (e) {
+                var bb = new BlobBuilder();
+                bb.append(e.data);
+                downloadFile = bb.getBlob();
+                download(downloadFile, filename);
+                downloadButton.disabled = false;
+                worker.terminate();
+            }, false);
+            worker.postMessage({png: png, level: 9});
+        });
     }, false);
 }());
