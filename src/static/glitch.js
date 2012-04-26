@@ -51,7 +51,6 @@
                 canvas.height = maxHeight;
                 canvas.width = Math.round(width * (maxHeight / height));
             }
-            console.log(canvas.width, canvas.height);
             var context = canvas.getContext('2d');
             context.drawImage(img, 0, 0, width, height,
                               0, 0, canvas.width, canvas.height);
@@ -122,42 +121,11 @@
         reader.readAsDataURL(blob);
     };
 
-    var glitch = function (png) {
-        glitching = true;
-        var interval = (function () {
-            var start = Date.now();
-            png.writeAsArrayBuffer(0);
-            var end = Date.now();
-            return Math.max((end - start) * 2, 100);
-        }());
-        var glitchHeight = Math.max(Math.ceil(png.height * (interval / 10000)), 5);
-        var start = png.height - 1;
-        var end = Math.max(start - glitchHeight, 0);
-        var img = document.getElementById('target');
-        var progress = document.createElement('progress');
-        progress.max = 1.0;
-        progress.value = 0.0;
-        var cid = setInterval(function () {
-            if (start < 0) {
-                clearInterval(cid);
-                var downloadButton = document.getElementById('download-button');
-                downloadButton.style.opacity = 1;
-                downloadButton.disabled = false;
-                glitching = false;
-                document.getElementById('button-container').removeChild(progress);
-                progress.value = 1.0;
-                return;
-            }
-            for (var i = start; i >= end; --i) {
-                png.getline(i)[0] = PNG.FILTER_PAETH;
-            }
-            var blob = png.writeAsBlob(0);
-            img.src = URL.createObjectURL(blob);
-            start = end - 1;
-            end = Math.max(start - glitchHeight, 0);
-            progress.value = (png.height - end) / png.height;
-        }, interval);
-        document.getElementById('button-container').appendChild(progress);
+    var glitch = function (png, start, end) {
+        for (var i = start; i < end; ++i) {
+            png.getline(i)[0] = PNG.FILTER_PAETH;
+        }
+        return png;
     };
 
     var showImage = function (file) {
@@ -235,7 +203,39 @@
     var glitchButton = document.getElementById('glitch-button');
     glitchButton.addEventListener('click', function (ev) {
         removeGlitchButton();
-        loadImageAsPNG(targetFile, 500, 500, glitch);
+        glitching = true;
+        loadImageAsPNG(targetFile, 500, 500, function (png) {
+            var interval = (function () {
+                var start = Date.now();
+                png.writeAsArrayBuffer(0);
+                var end = Date.now();
+                return Math.max((end - start) * 2, 100);
+            }());
+            var glitchHeight = Math.max(Math.ceil(png.height * (interval / 10000)), 5);
+            var start = Math.max(png.height - glitchHeight, 0);
+            var end = png.height - 1;
+            var img = document.getElementById('target');
+            var progress = document.createElement('progress');
+            progress.max = 1.0;
+            progress.value = 0.0;
+            var cid = setInterval(function () {
+                if (end === 0) {
+                    clearInterval(cid);
+                    downloadButton.style.opacity = 1;
+                    downloadButton.disabled = false;
+                    glitching = false;
+                    document.getElementById('button-container').removeChild(progress);
+                    progress.value = 1.0;
+                    return;
+                }
+                var blob = glitch(png, start, end).writeAsBlob(0);
+                img.src = URL.createObjectURL(blob);
+                end = start;
+                start = Math.max(end - glitchHeight, 0);
+                progress.value = (png.height - end) / png.height;
+            }, interval);
+            document.getElementById('button-container').appendChild(progress);
+        });
     }, false);
     var downloadButton = document.getElementById('download-button');
     downloadButton.addEventListener('click', function (ev) {
@@ -248,9 +248,7 @@
             return;
         }
         loadImageAsPNG(targetFile, function (png) {
-            for (var i = 0; i < png.height; ++i) {
-                png.getline(i)[0] = PNG.FILTER_PAETH;
-            }
+            png = glitch(png, 0, png.height);
             var worker = new Worker('/static/worker.js');
             worker.addEventListener('message', function (e) {
                 var bb = new BlobBuilder();
