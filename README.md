@@ -4,6 +4,7 @@
 
 * ffDataView (<https://github.com/ukyo/ffDataView>)
 * jsziptools (<https://github.com/ukyo/jsziptools>)
+* jQuery     (<http://jquery.com/>)
 
 
 # デモ #
