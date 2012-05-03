@@ -74,7 +74,7 @@ jQuery(document).ready(function () {
         var reader = new FileReader();
         var $progress = jQuery('<progress>')
                 .prop({max: 1.0, value: 0.0})
-                .appendTo(jQuery('#button-container'));
+                .appendTo('#button-container');
         reader.onloadstart = function (e) {
             $progress.prop({value: 0.0});
         };
@@ -110,7 +110,7 @@ jQuery(document).ready(function () {
             id: 'target'
         }).load(function (e) {
             URL.revokeObjectURL(jQuery(this).prop('src'));
-        }).appendTo(jQuery('#canvas-container'));
+        }).appendTo('#canvas-container');
     };
 
 
