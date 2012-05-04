@@ -3,7 +3,7 @@
   <head>
     <meta charset="UTF-8">
     <title>Glitch from feet</title>
-    <link rel="stylesheet" href="src/static/style.css">
+    <link rel="stylesheet" href="src/static/style.css" />
     <script src="src/static/dataview.min.js"></script>
     <script src="src/static/jsziptools.min.js"></script>
     <script src="src/static/jquery-1.7.2.min.js"></script>
@@ -15,10 +15,69 @@
     <div id="button-container">
       <button id="glitch-button">Glitch!</button>
       <button id="download-button" disabled="disabled">Download</button>
+      <progress id="progress-bar" max="1.0" value="0.0">0%</progress>
     </div>
     <div id="container">
-      <div id="canvas-container">
-        <span>Drop Image File Here</span>
+      <div id="container-row">
+        <div id="canvas-container">
+          <span>Drop Image File Here</span>
+        </div>
+        <div id="control-panel">
+          <h1>
+            <input id="controller-button" type="checkbox" />
+            <label for="controller-button">Advanced mode</label>
+          </h1>
+          <fieldset class="src-filter">
+            <legend>source filters</legend>
+            <ul>
+              <li>
+                <input id="src-none-filter" type="checkbox" value="none" />
+                <label for="src-none-filter">none</label>
+              </li>
+              <li>
+                <input id="src-sub-filter" type="checkbox" value="sub" checked="checked" />
+                <label for="src-sub-filter">sub</label>
+              </li>
+              <li>
+                <input id="src-up-filter" type="checkbox" value="up" checked="checked" />
+                <label for="src-up-filter">up</label>
+              </li>
+              <li>
+                <input id="src-average-filter" type="checkbox" value="average" checked="checked" />
+                <label for="src-average-filter">average</label>
+              </li>
+              <li>
+                <input id="src-paeth-filter" type="checkbox" value="paeth" />
+                <label for="src-paeth-filter">paeth</label>
+              </li>
+            </ul>
+          </fieldset>
+          <fieldset class="dest-filter">
+            <legend>destination filter</legend>
+            <ul>
+              <li>
+                <input name="dest-filter" id="dest-none-filter" type="radio" value="none" />
+                <label for="dest-none-filter">none</label>
+              </li>
+              <li>
+                <input name="dest-filter" id="dest-sub-filter" type="radio" value="sub" />
+                <label for="dest-sub-filter">sub</label>
+              </li>
+              <li>
+                <input name="dest-filter" id="dest-up-filter" type="radio" value="up" />
+                <label for="dest-up-filter">up</label>
+              </li>
+              <li>
+                <input name="dest-filter" id="dest-average-filter" type="radio" value="average" />
+                <label for="dest-average-filter">average</label>
+              </li>
+              <li>
+                <input name="dest-filter" id="dest-paeth-filter" type="radio" value="paeth" checked="checked" />
+                <label for="dest-paeth-filter">paeth</label>
+              </li>
+            </ul>
+          </fieldset>
+        </div>
       </div>
     </div>
   </body>

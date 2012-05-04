@@ -26,7 +26,6 @@ jQuery(document).ready(function () {
             .load(function (e) {
                 var width = jQuery(this).prop('width');
                 var height = jQuery(this).prop('height');
-                var $canvas = jQuery('<canvas>');
                 var size = {};
                 if ((!maxWidth && !maxHeight) ||
                     (width <= maxWidth && height <= maxHeight)) {
@@ -40,11 +39,11 @@ jQuery(document).ready(function () {
                     size.width = Math.round(width * (maxHeight / height));
                     size.height = maxHeight;
                 }
-                $canvas.prop(size);
+                var $canvas = jQuery('<canvas>').prop(size);
                 var context = $canvas[0].getContext('2d');
                 context.drawImage(this, 0, 0, width, height,
                                   0, 0, size.width, size.height);
-                var png = PNG.fromCanvas($canvas[0]);
+                var png = PNG.fromCanvas($canvas[0], srcFilters);
                 callback(png);
                 URL.revokeObjectURL(jQuery(this).prop('src'));
             });
@@ -72,9 +71,7 @@ jQuery(document).ready(function () {
             return;
         }
         var reader = new FileReader();
-        var $progress = jQuery('<progress>')
-                .prop({max: 1.0, value: 0.0})
-                .appendTo(jQuery('#button-container'));
+        var $progress = jQuery('#progress-bar').animate({opacity: 1});
         reader.onloadstart = function (e) {
             $progress.prop({value: 0.0});
         };
@@ -90,7 +87,7 @@ jQuery(document).ready(function () {
         };
         reader.onloadend = function (e) {
             setTimeout(function () {
-                $progress.remove();
+                $progress.animate({opacity: 0});
             }, 1500);
         };
         reader.readAsDataURL(blob);
@@ -98,7 +95,7 @@ jQuery(document).ready(function () {
 
     var glitch = function (png, start, end) {
         for (var i = start; i < end; ++i) {
-            png.getline(i)[0] = PNG.FILTER_PAETH;
+            png.getline(i)[0] = destFilter;
         }
         return png;
     };
@@ -110,13 +107,53 @@ jQuery(document).ready(function () {
             id: 'target'
         }).load(function (e) {
             URL.revokeObjectURL(jQuery(this).prop('src'));
-        }).appendTo(jQuery('#canvas-container'));
+        }).appendTo('#canvas-container');
     };
 
+    var getFilter = function (type) {
+        var context = '#control-panel .' + type + '-filter';
+        var replacer = function (filter) {
+            return PNG['FILTER_' + filter.toUpperCase()];
+        };
+        switch (type) {
+        case 'src':
+            var result = [];
+            jQuery('input:checked', context).each(function () {
+                result.push(replacer(jQuery(this).val()));
+            });
+            return result.filter(function (filter) {
+                return typeof filter !== 'undefined';
+            });
+        case 'dest':
+            return replacer(jQuery('input:checked', context).val());
+        default:
+            throw new Error('type invalid');
+        }
+    };
+
+    var initCheckbox = function () {
+        jQuery([
+            '#src-sub-filter',
+            '#src-up-filter',
+            '#src-average-filter',
+            '#dest-paeth-filter'
+        ].join(',')).prop({checked: true});
+        jQuery([
+            '#controller-button',
+            '#src-none-filter',
+            '#src-paeth-filter',
+            '#dest-none-filter',
+            '#dest-up-filter',
+            '#dest-sub-filter',
+            '#dest-average-filter'
+        ].join(',')).prop({checked: false});
+    };
 
     var targetFile;
     var downloadFile;
     var glitching = false;
+    var srcFilters;
+    var destFilter;
     jQuery('#canvas-container').bind('dragenter dragover', function (e) {
         stopEvent(e);
         if (glitching) {
@@ -150,6 +187,12 @@ jQuery(document).ready(function () {
         downloadFile = null;
     });
     jQuery('#glitch-button').click(function (ev) {
+        srcFilters = getFilter('src');
+        destFilter = getFilter('dest');
+        if (srcFilters.length === 0) {
+            alert('source filter is not specified.');
+            return;
+        }
         jQuery(this).prop({disabled: true}).animate({opacity: 0});
         glitching = true;
         loadImageAsPNG(targetFile, 500, 500, function (png) {
@@ -163,10 +206,7 @@ jQuery(document).ready(function () {
             var start = Math.max(png.height - glitchHeight, 0);
             var end = png.height - 1;
             var $img = jQuery('#target');
-            var $progress = jQuery('<progress>').prop({
-                max: 1.0,
-                value: 0.0
-            });
+            var $progress = jQuery('#progress-bar').animate({opacity: 1});
             var cid = setInterval(function () {
                 if (end === 0) {
                     clearInterval(cid);
@@ -174,7 +214,7 @@ jQuery(document).ready(function () {
                     jQuery('#download-button')
                         .prop({disabled: false})
                         .css({opacity: 1});
-                    $progress.prop({value: 1.0}).remove();
+                    $progress.prop({value: 1.0}).animate({opacity: 0});
                     return;
                 }
                 png = glitch(png, start, end);
@@ -184,12 +224,18 @@ jQuery(document).ready(function () {
                 start = Math.max(end - glitchHeight, 0);
                 $progress.prop({value: (png.height - end) / png.height});
             }, interval);
-            jQuery('#button-container').append($progress);
         });
     });
     jQuery('#download-button').click(function (ev) {
-        var filename = 'glitched_' + targetFile.name;
-        filename = filename.replace(/\.\w+$/, '.png');
+        var filename = [
+            'glitched-',
+            targetFile.name.replace(/\.\w+$/, ''),
+            '-',
+            srcFilters.join('_'),
+            'to',
+            destFilter,
+            '.png'
+        ].join('');
         var $that = jQuery(this);
         $that.prop({disabled: true});
         if (downloadFile) {
@@ -211,4 +257,16 @@ jQuery(document).ready(function () {
             worker.postMessage({png: png, level: 9});
         });
     });
+    jQuery('#controller-button').change(function (e) {
+        var $target = jQuery('#control-panel > fieldset');
+        if (jQuery(this).prop('checked')) {
+            $target.fadeIn();
+        }
+        else {
+            $target.fadeOut(function () {
+                initCheckbox();
+            });
+        }
+    });
+    initCheckbox();
 });
