@@ -257,7 +257,11 @@
             line: choosenLine
         };
     };
-    PNG.fromCanvas = function (canvas) {
+    PNG.fromCanvas = function (canvas, filters) {
+        filters = filters || [
+            PNG.FILTER_NONE, PNG.FILTER_SUB, PNG.FILTER_UP,
+            PNG.FILTER_AVERAGE, PNG.FILTER_PAETH
+        ];
         var context = canvas.getContext('2d');
         var width = canvas.width;
         var height = canvas.height;
@@ -289,7 +293,6 @@
         var prevline;
         var curline;
         var result;
-        var filters = [PNG.FILTER_SUB, PNG.FILTER_UP, PNG.FILTER_AVERAGE];
         for (var y = 0; y < height; ++y) {
             prevline = (y === 0)? null: pixels.subarray((y - 1) * ilinelength, y * ilinelength);
             curline = pixels.subarray(y * ilinelength, (y + 1) * ilinelength);
