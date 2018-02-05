@@ -3,9 +3,6 @@
 (function (global) {
     'use strict';
 
-    // var crc32 = jz.algorithms.crc32;
-    var BlobBuilder = global.BlobBuilder || global.MozBlobBuilder || global.WebKitBlobBuilder;
-
     var zlib = {};
     zlib.crc32 = (function(){
         // crc32([0x00, 0x00, 0x02, 0x00, 0x00, 0x00, 0x02,0x00, 0x08, 0x02, 0x00, 0x00, 0x00], -1465799158) =>  2065318829
@@ -352,9 +349,7 @@
         return writer.write(this, level);
     };
     PNG.prototype.writeAsBlob = function (level) {
-        var bb = new BlobBuilder();
-        bb.append(this.writeAsArrayBuffer(level));
-        return bb.getBlob();
+        return new Blob([this.writeAsArrayBuffer(level)]);
     };
 
     var PNGParser = function () {

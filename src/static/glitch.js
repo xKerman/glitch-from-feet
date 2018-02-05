@@ -4,7 +4,6 @@ jQuery(document).ready(function () {
     'use strict';
 
 
-    var BlobBuilder = window.BlobBuilder || window.MozBlobBuilder || window.WebKitBlobBuilder;
     var URL = window.URL || window.webkitURL;
 
     var stopEvent = function (event) {
@@ -247,9 +246,7 @@ jQuery(document).ready(function () {
             png = glitch(png, 0, png.height);
             var worker = new Worker('/static/worker.js');
             worker.addEventListener('message', function (e) {
-                var bb = new BlobBuilder();
-                bb.append(e.data);
-                downloadFile = bb.getBlob();
+                downloadFile = new Blob([e.data]);
                 download(downloadFile, filename);
                 $that.prop({disabled: false});
                 worker.terminate();
