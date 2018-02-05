@@ -3,7 +3,7 @@
 (function () {
     'use strict';
 
-    importScripts('dataview.min.js', 'jsziptools.min.js', 'png.js');
+    importScripts('jsziptools.min.js', 'png.js');
 
     self.addEventListener('message', function (e) {
         var png = e.data.png;
