@@ -4,7 +4,6 @@ jQuery(document).ready(function () {
     'use strict';
 
 
-    var BlobBuilder = window.BlobBuilder || window.MozBlobBuilder || window.WebKitBlobBuilder;
     var URL = window.URL || window.webkitURL;
 
     var stopEvent = function (event) {
@@ -50,10 +49,13 @@ jQuery(document).ready(function () {
     };
 
     var emulateClick = function (link) {
-        var event = document.createEvent('MouseEvents');
+        var event = new MouseEvent('click', {
+            bubbles: true,
+            cancelable: true,
+            view: window
+        });
+        console.log(event);
         jQuery(link).appendTo(document.body);
-        event.initMouseEvent('click', true, true, window, 0, 0, 0, 0, 0,
-                             false, false, false, false, 0, null);
         link.dispatchEvent(event);
         jQuery(link).remove();
     };
@@ -247,9 +249,7 @@ jQuery(document).ready(function () {
             png = glitch(png, 0, png.height);
             var worker = new Worker('src/static/worker.js');
             worker.addEventListener('message', function (e) {
-                var bb = new BlobBuilder();
-                bb.append(e.data);
-                downloadFile = bb.getBlob();
+                downloadFile = new Blob([e.data]);
                 download(downloadFile, filename);
                 $that.prop({disabled: false});
                 worker.terminate();
