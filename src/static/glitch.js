@@ -49,10 +49,13 @@ jQuery(document).ready(function () {
     };
 
     var emulateClick = function (link) {
-        var event = document.createEvent('MouseEvents');
+        var event = new MouseEvent('click', {
+            bubbles: true,
+            cancelable: true,
+            view: window
+        });
+        console.log(event);
         jQuery(link).appendTo(document.body);
-        event.initMouseEvent('click', true, true, window, 0, 0, 0, 0, 0,
-                             false, false, false, false, 0, null);
         link.dispatchEvent(event);
         jQuery(link).remove();
     };
