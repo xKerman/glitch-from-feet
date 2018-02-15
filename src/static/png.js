@@ -52,7 +52,7 @@
             return ~result;
         };
     }());
-    zlib.adler32 = jz.algorithms.adler32;
+    zlib.adler32 = jz.algos.adler32;
     zlib.deflate = function (data) {
         var ibytes = (data instanceof Uint8Array)? data: new Uint8Array(data);
         var length = ibytes.length;
