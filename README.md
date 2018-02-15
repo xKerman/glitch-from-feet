@@ -10,7 +10,7 @@
 
 ## デモ
 
-<http://xkerman.github.com/glitch-from-feet/>
+<https://xkerman.github.io/glitch-from-feet/>
 
 
 ## Lisence
